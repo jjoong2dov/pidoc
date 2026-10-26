@@ -124,8 +124,23 @@ stale_deps = { "docs/src/reference.md" = ["pimon/__main__.py", "pimon/config.py"
 patterns = [
   { re = '"value": [0-9.]+(,\s+"unit": "%")', to = '"value": <n>\1' },
   { re = '"(free_mb|avail_mb)": \d+', to = '"\1": <n>' },
+  # 실제 파이에서는 온도·부하·가동 시간도 잴 때마다 바뀐다(가짜 파이는 고정값이라 몰랐다)
+  { re = '"value": [0-9.]+(,\s+"unit": "C")', to = '"value": <n>\1' },
+  { re = '"value": [0-9.]+(,\s+"load5")', to = '"value": <n>\1' },
+  { re = '"(load5|load15|uptime_s)": [0-9.]+', to = '"\1": <n>' },
 ]
 
 [build]
 title = "pimon 문서"
-order = ["quickstart.md", "reference.md"]
+order = ["quickstart.md", "pi-install.md", "reference.md"]
+
+# 파이에서 실제로 한 번 수집(튜토리얼 pi-install.md 의 출력 자리)
+[[command]]
+id = "pimon_once_pi"
+argv = ["python3", "-m", "pimon", "once"]
+targets = ["pi"]
+ok_exit = [0, 1, 2]
+  [[command.fact]]
+  key = "pimon.level"
+  extract = "json"
+  path = "level"

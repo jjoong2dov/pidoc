@@ -1,5 +1,6 @@
 import json
 import os
+import socket
 import sys
 from pathlib import Path
 
@@ -30,7 +31,7 @@ class Repo:
         self.config = self.docs / "pidoc.toml"
 
     def write_config(self, commands, timeout_s=20, max_output=1048576,
-                     env_allow=("PATH", "HOME", "LANG"), env_set=None):
+                     env_allow=("PATH", "HOME", "LANG"), env_set=None, extra_targets=""):
         env_set = env_set or {"LC_ALL": "C.UTF-8"}
         lines = [
             "[project]",
@@ -40,6 +41,8 @@ class Repo:
             "[targets.pc]",
             'kind = "local"',
             'alias = "devpc"',
+            "",
+            extra_targets,
             "",
             "[collect]",
             f"timeout_s = {timeout_s}",
@@ -53,7 +56,7 @@ class Repo:
                 "[[command]]",
                 f"id = {toml_str(c['id'])}",
                 f"argv = {toml_argv(c['argv'])}",
-                'targets = ["pc"]',
+                f"targets = {toml_argv(c.get('targets', ['pc']))}",
             ]
             for f in c.get("facts", []):
                 lines.append("  [[command.fact]]")
@@ -80,9 +83,59 @@ class Repo:
 
 
 @pytest.fixture
-def repo(tmp_path, monkeypatch):
+def home(tmp_path, monkeypatch):
+    # 진짜 홈·호스트 이름이 시험에 섞이지 않게 가짜로 바꾼다
+    h = tmp_path / "home" / "user"
+    h.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(h))
+    monkeypatch.setattr(socket, "gethostname", lambda: "devbox.example")
+    return h
+
+
+@pytest.fixture
+def repo(tmp_path, monkeypatch, home):
     monkeypatch.setenv("PIDOC_NOW", "2026-01-02T03:04:05Z")
     return Repo(tmp_path / "target")
+
+
+FAKE_SSH = """#!{py}
+import json, subprocess, sys
+with open({log!r}, "a", encoding="utf-8") as f:
+    f.write(json.dumps(sys.argv[1:]) + "\\n")
+# 원격 셸 흉내: 마지막 인자(원격 명령 한 줄)를 sh 로 돌린다
+sys.exit(subprocess.run(["/bin/sh", "-c", sys.argv[-1]]).returncode)
+"""
+
+
+class FakeSsh:
+    def __init__(self, log):
+        self.log = log
+
+    def calls(self):
+        if not self.log.exists():
+            return []
+        return [json.loads(ln) for ln in self.log.read_text(encoding="utf-8").splitlines()]
+
+
+@pytest.fixture
+def fake_ssh(tmp_path, monkeypatch):
+    """PATH 앞에 두는 가짜 ssh. 받은 argv 를 파일에 남긴다."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    log = tmp_path / "ssh-calls.jsonl"
+    script = bindir / "ssh"
+    script.write_text(FAKE_SSH.format(py=PY, log=str(log)), encoding="utf-8")
+    script.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bindir}{os.pathsep}{os.environ.get('PATH', '')}")
+    return FakeSsh(log)
+
+
+def ssh_target(name="pi", host="pi@raspi.example", allow=("printf", "false"), alias="pi"):
+    lines = [f"[targets.{name}]", 'kind = "ssh"', f"host = {toml_str(host)}",
+             f"alias = {toml_str(alias)}", 'known_hosts = "known_hosts"']
+    if allow is not None:
+        lines.append(f"allow_programs = {toml_argv(list(allow))}")
+    return "\n".join(lines) + "\n"
 
 
 @pytest.fixture

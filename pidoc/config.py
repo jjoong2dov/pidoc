@@ -1,14 +1,17 @@
 """docs/pidoc.toml 읽기와 검사."""
 
+import os
 import re
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
 ID_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]*$")
+# [사용자@]호스트. '-' 로 시작하면 ssh 옵션으로 읽히므로 막는다.
+HOST_RE = re.compile(r"^(?:[A-Za-z0-9_][\w.-]*@)?[A-Za-z0-9_][\w.-]*$", re.ASCII)
 EXTRACTS = {"stdout_all", "stdout_line", "regex", "json"}
 TYPES = {"string", "int", "float", "list", "bool"}
-TARGET_KINDS = {"local"}
+TARGET_KINDS = {"local", "ssh"}
 
 
 class ConfigError(Exception):
@@ -39,6 +42,9 @@ class Target:
     name: str
     kind: str
     alias: str
+    host: str | None = None
+    known_hosts: Path | None = None
+    allow_programs: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -99,7 +105,10 @@ def load(path):
         _need(kind in TARGET_KINDS, f"targets.{tname}.kind 를 지원하지 않음: {kind!r}")
         alias = t.get("alias", tname)
         _need(isinstance(alias, str), f"targets.{tname}.alias 는 문자열이어야 함")
-        targets[tname] = Target(tname, kind, alias)
+        target = Target(tname, kind, alias)
+        if kind == "ssh":
+            _load_ssh(target, t, docs)
+        targets[tname] = target
 
     col = data.get("collect", {})
     _need(isinstance(col, dict), "[collect] 가 표가 아님")
@@ -155,6 +164,27 @@ def load(path):
         env_set=dict(env_set),
         commands=commands,
     )
+
+
+def _host_env_name(tname):
+    return "PIDOC_TARGET_" + re.sub(r"[^A-Za-z0-9]", "_", tname).upper()
+
+
+def _load_ssh(target, t, docs):
+    where = f"targets.{target.name}"
+    env_name = _host_env_name(target.name)
+    host = os.environ.get(env_name) or t.get("host")
+    _need(isinstance(host, str) and HOST_RE.match(host),
+          f"{where}.host(또는 {env_name}) 가 올바르지 않음: {host!r}")
+    kh = t.get("known_hosts")
+    _need(isinstance(kh, str) and kh, f"{where}.known_hosts 가 필요함")
+    kh_path = (docs / Path(kh).expanduser()).resolve()
+    # ssh -o 값 안에서 공백·따옴표·% 는 따로 해석되므로 받지 않는다
+    _need(not re.search(r"[\s\"'%]", str(kh_path)),
+          f"{where}.known_hosts 경로에 공백·따옴표·% 를 쓸 수 없음: {kh_path}")
+    allow = t.get("allow_programs", [])
+    _need(_is_str_list(allow), f"{where}.allow_programs 는 문자열 목록이어야 함")
+    target.host, target.known_hosts, target.allow_programs = host, kh_path, list(allow)
 
 
 def _load_fact(cid, f):

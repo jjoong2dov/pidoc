@@ -7,6 +7,7 @@ import re
 import sys
 
 from pidoc.collect import write_json
+from pidoc.redact import Redactor
 
 TRUE = {"true", "yes", "on", "1"}
 FALSE = {"false", "no", "off", "0"}
@@ -113,12 +114,16 @@ def build_facts(cfg, run_id=None):
     if run_dir is None:
         print("쓸 수 있는 run 이 없음" + (f": {run_id}" if run_id else ""), file=sys.stderr)
         return 3
+    red = Redactor.from_config(cfg)
     problems = 0
     updated = 0
     for tname in cfg.targets:
         path = cfg.facts_dir / f"{tname}.json"
         facts = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
-        changed = False
+        # 이미 있는 사실도 가린다(가리기 전에 만든 파일 대비)
+        clean = red.obj(facts)
+        changed = clean != facts
+        facts = clean
         for cmd in cfg.commands:
             if tname not in cmd.targets or not cmd.facts:
                 continue
@@ -148,7 +153,7 @@ def build_facts(cfg, run_id=None):
                     problems += 1
                     continue
                 facts[fact.key] = {
-                    "value": value,
+                    "value": red.obj(value),
                     "type": fact.type,
                     "run": run_dir.name,
                     "command": cmd.id,

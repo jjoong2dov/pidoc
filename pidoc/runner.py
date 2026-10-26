@@ -54,6 +54,11 @@ def _kill_group(p):
         pass
 
 
+def not_run(error, duration_s=0.0):
+    """실행하지 않았거나 못 한 명령의 결과."""
+    return Result(None, False, error, duration_s, b"", b"", 0, 0, False, False)
+
+
 def run(argv, *, env, cwd, timeout_s, max_output):
     start = time.monotonic()
     try:
@@ -68,8 +73,7 @@ def run(argv, *, env, cwd, timeout_s, max_output):
             start_new_session=True,
         )
     except OSError as e:
-        return Result(None, False, f"실행하지 못함: {e}", time.monotonic() - start,
-                      b"", b"", 0, 0, False, False)
+        return not_run(f"실행하지 못함: {e}", time.monotonic() - start)
 
     out = _Sink(p.stdout, max_output)
     err = _Sink(p.stderr, max_output)

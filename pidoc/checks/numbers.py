@@ -19,6 +19,7 @@ pidoc-run·pidoc-quote 블록은 render 가 증거·파일에서 채우므로 �
 "한 번"은 "한 번 실행해 보세요" 같은 관용구가 대부분이라 세지 않는다.
 """
 
+import json
 import re
 
 from . import Finding
@@ -180,11 +181,22 @@ def scan_text(text, allow=(), level="error", code_level="warn"):
     return scan_doc(Doc("x.md", text, None), allow, level, code_level)
 
 
+def git_hashes(cfg):
+    """git 사실(pidoc notes 가 만든 facts/git.json)에 있는 커밋 해시. 숫자로만 된 짧은 해시(예: 7355781)도
+    근거가 있는 값이므로 숫자 검사에서 뺀다(12장 릴리스 노트에서 실제로 잡혔다)."""
+    try:
+        data = json.loads((cfg.docs_dir / "facts" / "git.json").read_text(encoding="utf-8"))
+        commits = data["facts"]["git.commits"]["value"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return []
+    return [c.split(" ", 1)[0] for c in commits if isinstance(c, str) and c.split(" ", 1)[0].isdigit()]
+
+
 def run(ctx):
     settings = ctx.cfg.check
     level = settings.get("numbers", "error")
     code_level = settings.get("code_numbers", "warn")
-    allow = settings.get("number_allow", [])
+    allow = list(settings.get("number_allow", [])) + git_hashes(ctx.cfg)
     findings = []
     for d in ctx.docs:
         for n, lv, msg in scan_doc(d, allow, level, code_level):

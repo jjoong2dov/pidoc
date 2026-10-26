@@ -94,3 +94,15 @@ def test_korean_numerals_and_vague_words_warn_only():
 def test_level_warn_and_off():
     assert scan_text("5초", level="warn")[0][1] == "warn"
     assert scan_text("5초, 두 번", level="off") == []
+
+
+def test_numeric_commit_hash_from_git_facts_is_allowed(tmp_path):
+    """숫자로만 된 짧은 해시(7355781)는 git 사실에 있으면 근거 있는 값(12장 실제 기록)."""
+    import json
+    from types import SimpleNamespace
+    from pidoc.checks.numbers import git_hashes
+    (tmp_path / "facts").mkdir()
+    (tmp_path / "facts/git.json").write_text(json.dumps(
+        {"facts": {"git.commits": {"value": ["7355781 고침", "87f2cf0 배포"]}}}))
+    assert git_hashes(SimpleNamespace(docs_dir=tmp_path)) == ["7355781"]
+    assert git_hashes(SimpleNamespace(docs_dir=tmp_path / "없음")) == []

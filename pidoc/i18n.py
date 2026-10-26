@@ -3,6 +3,7 @@
 코드 블록(언어·본문), 인라인 코드, {{...}} 자리표시자, 링크 주소, 본문 숫자.
 """
 
+import os
 import re
 from collections import Counter
 from pathlib import Path
@@ -17,6 +18,19 @@ PLACEHOLDER_RE = re.compile(r"\{\{[^{}]*\}\}")
 EN_CHAPTER_RE = re.compile(r"(?i)\b(?:chapter|section|ch\.)\s+\d+(?:\.\d+)*")
 
 
+def _link_target(d, url):
+    """상대 링크는 문서 위치 기준으로 가리키는 파일을 풀어서 비교한다.
+    번역본을 다른 폴더(src/en/)에 두면 '../reference.md' 처럼 글자는 달라도 같은 파일을 가리킨다.
+    (번역을 시킬 때 그렇게 고쳐도 된다고 허락했는데 글자 비교로 오류가 났다)"""
+    if re.match(r"^[a-z][a-z0-9+.-]*:|^#|^/", url):
+        return url
+    path, sep, anchor = url.partition("#")
+    if not path:
+        return url
+    target = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(d.path)), path))
+    return os.path.relpath(target) + sep + anchor   # 화면에는 지금 폴더 기준으로
+
+
 def _items(d):
     """비교할 것들: {종류: [(줄, 값)]}"""
     items = {"code": [], "inline": [], "placeholder": [], "link": [], "number": []}
@@ -28,7 +42,7 @@ def _items(d):
             continue
         items["placeholder"] += [(n, m.group(0)) for m in PLACEHOLDER_RE.finditer(line)]
         items["inline"] += [(n, m.group(2).strip()) for m in INLINE_CODE_RE.finditer(line)]
-        items["link"] += [(n, m.group(2)) for m in LINK_RE.finditer(line)]
+        items["link"] += [(n, _link_target(d, m.group(2))) for m in LINK_RE.finditer(line)]
         items["number"] += [(n, num) for num in numbers_in(EN_CHAPTER_RE.sub("", line))]
     return items
 

@@ -154,3 +154,15 @@ def test_i18n_differences(tmp_path, monkeypatch, capsys):
     assert "en.md:3: [i18n] 원본에 없는 숫자 '10'" in out
     assert "en.md:3: [i18n] 원본에 없는 숫자 '3.12'" in out
     assert "en.md:4: [i18n] 원본에 없는 링크 주소 'ref.md#settings'" in out
+
+
+def test_i18n_link_resolved_by_location(tmp_path, monkeypatch):
+    """번역본을 en/ 폴더에 두고 링크를 ../ 로 고친 것은 같은 파일을 가리키므로 문제 아님(12장 실제 기록)."""
+    from pidoc.i18n import i18n_check
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "en").mkdir()
+    (tmp_path / "a.md").write_text("# 제목\n\n[참조](reference.md#하위-명령)\n")
+    (tmp_path / "en/a.md").write_text("# Title\n\n[Reference](../reference.md#하위-명령)\n")
+    assert i18n_check("a.md", "en/a.md") == 0
+    (tmp_path / "en/b.md").write_text("# Title\n\n[Reference](reference.md#하위-명령)\n")
+    assert i18n_check("a.md", "en/b.md") == 1

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pidoc"
-version = "0.5.0"
+version = "0.6.0"
 description = "실행 증거 없이는 명령·출력·버전·수치가 문서에 들어가지 않게 하는 작은 도구"
 readme = "README.md"
 license = { text = "MIT" }

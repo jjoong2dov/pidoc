@@ -256,6 +256,7 @@ pidoc draft 틀.md --out docs/src/usage.md --ai none      # 부르지 않고 프
 | `v0.3-pi` | 13장 파이 실기에서 찾아 고친 것: 대상별 `known_hosts`, 이 PC 홈 경로 가리기, walk 시작 폴더, ssh 대상의 실제 호스트 이름 가리기. 예제에 파이 설치 튜토리얼(`examples/pimon/docs/src/pi-install.md`) |
 | `v0.4` | 12장 응용 실행에서 고친 것: i18n-check 링크를 문서 위치 기준으로 비교, git 사실의 숫자로만 된 커밋 해시를 숫자 검사에서 뺌 |
 | `v0.5` | 원고 작업 중 발견: secrets 가 `.xml`(junit.xml 의 hostname) 등도 검사, `check --rerun` 이 ssh 실패 때 죽던 것, PDF 가 막은 주소를 경고, 한글 글꼴 안내 |
+| `v0.6` | Codex 최종 사실 검토에서 고친 것: 코드 사실도 같은 추출기로 다시 뽑아 값을 대조, HTML 에서 하위 폴더 문서의 링크 변환 |
 
 설계와 달라진 점은 [DESIGN_CHANGES.md](DESIGN_CHANGES.md), 작업 규칙은 [CLAUDE.md](CLAUDE.md).
 

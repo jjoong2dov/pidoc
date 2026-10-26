@@ -59,12 +59,25 @@ def not_run(error, duration_s=0.0):
     return Result(None, False, error, duration_s, b"", b"", 0, 0, False, False)
 
 
-def run(argv, *, env, cwd, timeout_s, max_output):
+def _feed(stream, data):
+    try:
+        stream.write(data)
+    except OSError:
+        pass  # 상대가 먼저 끝남
+    finally:
+        try:
+            stream.close()
+        except OSError:
+            pass
+
+
+def run(argv, *, env, cwd, timeout_s, max_output, stdin_data=None):
+    """stdin_data 가 있으면 stdin 으로 보낸다(없으면 /dev/null)."""
     start = time.monotonic()
     try:
         p = subprocess.Popen(
             argv,
-            stdin=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL if stdin_data is None else subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
@@ -75,6 +88,10 @@ def run(argv, *, env, cwd, timeout_s, max_output):
     except OSError as e:
         return not_run(f"실행하지 못함: {e}", time.monotonic() - start)
 
+    feeder = None
+    if stdin_data is not None:
+        feeder = threading.Thread(target=_feed, args=(p.stdin, stdin_data), daemon=True)
+        feeder.start()
     out = _Sink(p.stdout, max_output)
     err = _Sink(p.stderr, max_output)
     timed_out = False
@@ -86,6 +103,8 @@ def run(argv, *, env, cwd, timeout_s, max_output):
         p.wait()
     # 남은 자식이 파이프를 붙잡고 있지 않게 정리한다
     _kill_group(p)
+    if feeder:
+        feeder.join()
     out.thread.join()
     err.thread.join()
     return Result(

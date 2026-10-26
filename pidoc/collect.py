@@ -16,7 +16,7 @@ def write_json(path, data):
     os.replace(tmp, path)
 
 
-def _new_run_dir(runs_dir, stamp):
+def new_run_dir(runs_dir, stamp):
     runs_dir.mkdir(parents=True, exist_ok=True)
     n = 1
     while True:
@@ -49,7 +49,7 @@ def _run(cfg, target, cmd, env):
 
 def collect(cfg):
     created = clock.now()
-    run_id, run_dir = _new_run_dir(cfg.runs_dir, clock.run_stamp(created))
+    run_id, run_dir = new_run_dir(cfg.runs_dir, clock.run_stamp(created))
     env = _env(cfg)
     red = Redactor.from_config(cfg)
     entries = []

@@ -1,0 +1,31 @@
+"""명령줄 입구."""
+
+import argparse
+import sys
+
+from pidoc import config
+from pidoc.collect import collect
+from pidoc.facts import build_facts
+
+
+def parser():
+    p = argparse.ArgumentParser(prog="pidoc", description="실행 증거로 기술문서를 만든다.")
+    sub = p.add_subparsers(dest="cmd", required=True, metavar="명령")
+    c = sub.add_parser("collect", help="명령을 실행해 증거를 남긴다")
+    c.add_argument("--config", default="docs/pidoc.toml", help="설정 파일(기본 docs/pidoc.toml)")
+    f = sub.add_parser("facts", help="증거에서 사실을 뽑는다")
+    f.add_argument("--config", default="docs/pidoc.toml", help="설정 파일(기본 docs/pidoc.toml)")
+    f.add_argument("--run", help="쓸 run id(기본 가장 최근)")
+    return p
+
+
+def main(argv=None):
+    args = parser().parse_args(argv)
+    try:
+        cfg = config.load(args.config)
+    except config.ConfigError as e:
+        print(f"설정 오류: {e}", file=sys.stderr)
+        return 2
+    if args.cmd == "collect":
+        return collect(cfg)
+    return build_facts(cfg, args.run)

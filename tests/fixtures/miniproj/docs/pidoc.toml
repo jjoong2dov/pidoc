@@ -1,0 +1,32 @@
+[project]
+name = "minimon"
+root = ".."
+
+[targets.pc]
+kind = "local"
+alias = "devpc"
+
+[collect]
+allow_programs = ["python3"]
+
+[[command]]
+id = "help"
+argv = ["python3", "-m", "minimon", "--help"]
+  [[command.fact]]
+  key = "minimon.commands"
+  extract = "regex"
+  pattern = '\{([a-z,]+)\}'
+  type = "list"
+
+[[command]]
+id = "scan"
+argv = ["python3", "-m", "minimon", "scan"]
+  [[command.fact]]
+  key = "minimon.scan_path"
+  extract = "regex"
+  pattern = 'scan (\S+)'
+
+[extract]
+paths = ["minimon"]
+config_example = "minimon.toml.example"
+config_module = "minimon/settings.py"

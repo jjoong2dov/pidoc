@@ -1,0 +1,8 @@
+# minimon 설정 견본
+path = "/"          # 사용률을 볼 경로
+limit = 90          # 경고 기준(%)
+                    # 넘으면 scan 이 1 로 끝남
+
+[web]
+port = 8000         # 웹 포트
+enabled = false

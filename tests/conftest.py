@@ -51,3 +51,16 @@ def write_config(root, text):
 
 def pidoc(*args):
     return main([str(a) for a in args])
+
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+@pytest.fixture
+def miniproj(tmp_path, monkeypatch):
+    """tests/fixtures/miniproj 의 사본(시험이 마음껏 고쳐도 되게)."""
+    import shutil
+    root = tmp_path / "miniproj"
+    shutil.copytree(FIXTURES / "miniproj", root, ignore=shutil.ignore_patterns("__pycache__"))
+    monkeypatch.chdir(root)
+    return root

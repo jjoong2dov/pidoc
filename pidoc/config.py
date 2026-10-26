@@ -49,6 +49,7 @@ class Config:
         self.collect = dict(COLLECT_DEFAULTS, **data.get("collect", {}))
         self.default_target = project.get("default_target")
         self.redact = data.get("redact", {})
+        self.extract = data.get("extract", {})
 
     # 자주 쓰는 폴더
     @property
@@ -244,7 +245,16 @@ def _check_redact(cfg):
     _type(r.get("names", []), "strlist", "redact.names")
 
 
-SECTIONS = ("project", "targets", "collect", "command", "redact")
+def _check_extract(cfg):
+    e = cfg.extract
+    _keys(e, ("paths", "config_example", "config_module", "config_defaults"), "extract")
+    _type(e.get("paths", ["."]), "strlist", "extract.paths")
+    for key in ("config_example", "config_module", "config_defaults"):
+        if key in e:
+            _type(e[key], "str", f"extract.{key}")
+
+
+SECTIONS = ("project", "targets", "collect", "command", "redact", "extract")
 
 
 def load(path):
@@ -264,6 +274,7 @@ def load(path):
     _check_collect(cfg)
     _check_commands(cfg)
     _check_redact(cfg)
+    _check_extract(cfg)
     return cfg
 
 

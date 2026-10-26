@@ -35,6 +35,12 @@ def cmd_replay(args):
     return replay(cfg, args.runs)
 
 
+def cmd_extract(args):
+    from .extract import extract
+    cfg = load_config(args)
+    return extract(cfg, list(dict.fromkeys(args.kinds)))
+
+
 def cmd_facts(args):
     cfg = load_config(args)
     every = facts.load_all(cfg.facts_dir)
@@ -81,6 +87,10 @@ def parser():
     s = sub.add_parser("replay", help="저장된 증거에서 사실만 다시 뽑기(실행 안 함)")
     s.add_argument("runs", help="run 폴더 하나 또는 runs 폴더")
     s.set_defaults(func=cmd_replay)
+
+    s = sub.add_parser("extract", help="코드에서 레퍼런스 사실 뽑기(facts/code.json)")
+    s.add_argument("kinds", nargs="+", choices=["cli", "config", "http", "py"], help="뽑을 종류")
+    s.set_defaults(func=cmd_extract)
 
     s = sub.add_parser("facts", help="사실 목록 보기")
     s.add_argument("--target", help="이 대상만")

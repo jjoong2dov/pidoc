@@ -22,3 +22,11 @@
   ssh 대상은 host 에 적은 이름(과 첫 마디)이다. 다른 낱말의 일부(pi4 와 pi42)는 바꾸지 않는다.
 - replay 는 지금 설정의 추출 규칙을 쓰고, 설정에 없는 명령이면 manifest 사본을 쓴다.
   저장된 stdout 의 sha256 이 기록과 다르면 멈춘다(종료 3).
+
+## extract
+- 설정 `[extract]`: `paths`(읽을 파이썬 폴더), `config_example`, `config_module`, `config_defaults`(기본 "DEFAULTS").
+- 사실 키: `cli.<prog>.{description,commands,options}`, `cli.<prog>.option.<이름>.{help,default,choices}`,
+  `config.<점.키>.{default,example,comment}`, `config.keys`, `http.<메서드>.paths`, `py.<모듈>[.<이름>].doc`.
+  코드 사실에는 `source`(파일)를 더 남긴다.
+- 같은 종류를 다시 뽑으면 그 종류의 옛 키를 지운다(코드에서 사라진 옵션이 사실로 남지 않게).
+- `tests` 폴더 안의 파이썬은 읽지 않는다.

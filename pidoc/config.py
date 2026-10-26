@@ -354,7 +354,9 @@ def _check_build(cfg):
 
 def _check_walk(cfg):
     w = cfg.walk
-    _keys(w, ("timeout_s",), "walk")
+    _keys(w, ("timeout_s", "cwd"), "walk")
+    if "cwd" in w:
+        _type(w["cwd"], "str", "walk.cwd")
     _type(w.get("timeout_s", 600), "num", "walk.timeout_s")
 
 

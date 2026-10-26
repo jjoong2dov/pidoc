@@ -6,7 +6,8 @@
 그래서 collect.allow_programs 를 적용하지 않는다(문서에 적힌 명령이 곧 시험 대상이다).
 믿을 수 있는 문서만, 시험용 장비·계정에서 돌릴 것.
 
-- 단계 사이에 작업 폴더(cd)는 이어진다. 환경변수(export)는 이어지지 않으니 단계마다 적는다.
+- 시작 폴더: ssh 대상은 로그인한 홈, 로컬 대상은 프로젝트 루트. [walk] cwd 로 바꿀 수 있다.
+- 단계 사이에 작업 폴더(cd)는 이어진다(--from 으로 중간부터 시작하면 시작 폴더에서 다시 시작). 환경변수(export)는 이어지지 않으니 단계마다 적는다.
 - 단계마다 docs/evidence/walks/<id>/ 에 스크립트·stdout·stderr·종료 코드·시간을 남긴다(가리기 적용).
 - 실패하면 거기서 멈추고 "N단계 실패" 와 마지막 출력을 보여 주고 종료 3.
 """
@@ -82,11 +83,14 @@ def walk(cfg, path, target_name, start=1, dry_run=False):
     walk_dir = evidence.new_run_dir(cfg.docs_dir / "evidence" / "walks", target.name, started)
     timeout = cfg.walk.get("timeout_s", 600)
     rules = redact.rules_for(cfg, target)
+    # 따라 하기 문서는 독자가 막 로그인한 자리(홈)에서 시작한다. 대상의 cwd 는 collect 용이라 쓰지 않는다
+    # (파이 실기에서 cwd = "pimon" 을 그대로 써서, pimon 을 받기도 전에 cd 가 실패했다).
+    start_cwd = cfg.walk.get("cwd")
     if target.kind == "local":
-        local_cwd = cfg.inside(target.cwd or ".", f"targets.{target.name}.cwd")
+        local_cwd = cfg.inside(start_cwd or ".", "walk.cwd")
         remote_cwd = None
     else:
-        local_cwd, remote_cwd = None, target.cwd
+        local_cwd, remote_cwd = None, start_cwd
     print(f"[{target.name}] walk {walk_dir.name}: {name} ({len(steps)}단계)")
     records, failed_at = [], None
     for i, (line, block) in enumerate(steps, 1):

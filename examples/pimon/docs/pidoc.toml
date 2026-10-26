@@ -20,7 +20,7 @@ timeout_s = 20
 max_output = 1048576
 env_allow = ["PATH", "HOME", "LANG"]
 env_set = { LC_ALL = "C.UTF-8" }
-allow_programs = ["python3", "uname"]
+allow_programs = ["python3", "uname", "cat"]
 
 # 가짜 파이 폴더를 새로 만든다(사실은 없음, 다음 명령의 준비)
 [[command]]
@@ -32,6 +32,7 @@ targets = ["pc"]
 id = "python_version"
 argv = ["python3", "--version"]
 targets = ["pc", "pi"]
+cwd = "."                    # pimon 을 받기 전에도 돌 수 있게(대상의 기본 cwd 대신)
   [[command.fact]]
   key = "system.python_version"
   extract = "regex"
@@ -79,9 +80,30 @@ targets = ["pc"]
 id = "kernel"
 argv = ["uname", "-r"]
 targets = ["pi"]
+cwd = "."
   [[command.fact]]
   key = "system.kernel_release"
   extract = "stdout_line"
+
+[[command]]
+id = "board_model"
+argv = ["cat", "/proc/device-tree/model"]
+targets = ["pi"]
+cwd = "."
+  [[command.fact]]
+  key = "system.board_model"
+  extract = "regex"
+  pattern = '([^\x00]+)'
+
+[[command]]
+id = "os_release"
+argv = ["cat", "/etc/os-release"]
+targets = ["pi"]
+cwd = "."
+  [[command.fact]]
+  key = "system.os_name"
+  extract = "regex"
+  pattern = 'PRETTY_NAME="([^"]+)"'
 
 [redact]
 hostname = true              # 실제 hostname → alias (pimon once 의 "host" 값)

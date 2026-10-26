@@ -110,7 +110,8 @@ def test_walk_over_ssh(miniproj, bindir, tmp_path, monkeypatch, capsys):
     make_exe(bindir, "ssh", FAKE_SSH)
     toml = miniproj / "docs/pidoc.toml"
     toml.write_text(toml.read_text().replace(
-        "[collect]\n", '[targets.pi]\nkind = "ssh"\nhost = "pi@192.0.2.20"\nalias = "pi4"\ncwd = "' + str(tmp_path) + '"\n\n'
+        "[collect]\n", '[targets.pi]\nkind = "ssh"\nhost = "pi@192.0.2.20"\nalias = "pi4"\ncwd = "pimon"\n\n'
+        '[walk]\ncwd = "' + str(tmp_path) + '"\n\n'
         '[collect]\nenv_allow = ["PATH", "SSH_LOG"]\n'))
     write(miniproj, DOC)
     assert pidoc("walk", "docs/out/tutorial.md", "--target", "pi") == 0
@@ -121,3 +122,18 @@ def test_walk_over_ssh(miniproj, bindir, tmp_path, monkeypatch, capsys):
     assert (tmp_path / "work/sub/note.txt").read_text() == "안녕\n"
     d = miniproj / "docs/evidence/walks/20261026T231500-pi"
     assert (d / "step02.stdout").read_text() == "안녕\nsub\n"
+
+
+def test_walk_does_not_start_in_target_cwd(miniproj, bindir, tmp_path, monkeypatch, capsys):
+    """파이 실기: 대상 cwd(collect 용 "pimon")에서 시작해 pimon 을 받기도 전에 cd 가 실패했다."""
+    log = tmp_path / "ssh.log"
+    monkeypatch.setenv("SSH_LOG", str(log))
+    make_exe(bindir, "ssh", FAKE_SSH)
+    toml = miniproj / "docs/pidoc.toml"
+    toml.write_text(toml.read_text().replace(
+        "[collect]\n", '[targets.pi]\nkind = "ssh"\nhost = "pi@192.0.2.20"\nalias = "pi4"\ncwd = "pimon"\n\n'
+        '[collect]\nenv_allow = ["PATH", "SSH_LOG"]\n'))
+    write(miniproj, DOC)
+    pidoc("walk", "docs/out/tutorial.md", "--target", "pi")
+    first = log.read_text().split("\0")[:9]
+    assert "cd -- pimon" not in first[8]

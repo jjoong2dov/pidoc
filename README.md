@@ -153,15 +153,15 @@ pidoc stale --since HEAD    # git diff 로 (CI 에서 PR 마다)
 | 표 | 키 |
 |---|---|
 | `[project]` | `name`, `root`(이 파일 기준 대상 저장소), `default_target` |
-| `[targets.이름]` | `kind`(local\|ssh), `host`(ssh, `PIDOC_TARGET_<이름>` 환경변수로 덮어씀), `alias`, `cwd` |
+| `[targets.이름]` | `kind`(local\|ssh), `host`(ssh, `PIDOC_TARGET_<이름>` 환경변수로 덮어씀), `alias`, `cwd`, `known_hosts`(이 대상만의 호스트 키 파일, docs 기준 경로) |
 | `[collect]` | `timeout_s`, `max_output`, `env_allow`, `env_set`, `allow_programs` |
 | `[[command]]` | `id`, `argv`, `targets`, `cwd`, `timeout_s`, `ok_exit`, `[[command.fact]]`(`key`, `extract`=stdout_all\|stdout_line\|regex\|json, `pattern`, `line`, `path`, `sep`, `type`=string\|int\|float\|list\|bool, `max_age_days`) |
-| `[redact]` | `patterns = [{re, to}]`, `hostname`, `names` — 수집 직후 증거·사실에 적용 |
+| `[redact]` | `patterns = [{re, to}]`, `hostname`, `names`, `home`(이 PC 홈 경로 → ~, 기본 켬) — 수집 직후 증거·사실에 적용. ssh 대상의 실제 호스트 이름은 수집 때 `uname -n` 으로 알아내 가린다 |
 | `[mask]` | `time`, `hostname`, `pid`, `patterns` — run 비교 때만 |
 | `[extract]` | `paths`, `config_example`, `config_module`, `config_defaults` |
 | `[check]` | `numbers`·`code_numbers`(error\|warn\|off), `number_allow`, `stale_deps`, `unused_facts`, `terms`, `banned`, `ip_allow`, `email_allow`, `home_allow`(기본 ["pi"]) |
 | `[ai]` | `provider`(claude\|codex\|none, 기본 none), `model`, `timeout_s`, `facts`(AI 에 보낼 사실 패턴, 기본 ["*"]) |
-| `[walk]` | `timeout_s`(단계마다, 기본 600) |
+| `[walk]` | `timeout_s`(단계마다, 기본 600), `cwd`(시작 폴더, 기본: ssh 는 로그인 홈, 로컬은 프로젝트 루트) |
 | `[build]` | `title`, `order` |
 
 ## 파이에서 수집 (ssh)
@@ -255,6 +255,7 @@ pidoc draft 틀.md --out docs/src/usage.md --ai none      # 부르지 않고 프
 | `v0.2-review1` | Codex 코드 리뷰 1차 반영([REVIEW1.md](REVIEW1.md)) + `pidoc walk`. 13장(파이 실기)의 출발점 |
 | `v0.3-pi` | 13장 파이 실기에서 찾아 고친 것: 대상별 `known_hosts`, 이 PC 홈 경로 가리기, walk 시작 폴더, ssh 대상의 실제 호스트 이름 가리기. 예제에 파이 설치 튜토리얼(`examples/pimon/docs/src/pi-install.md`) |
 | `v0.4` | 12장 응용 실행에서 고친 것: i18n-check 링크를 문서 위치 기준으로 비교, git 사실의 숫자로만 된 커밋 해시를 숫자 검사에서 뺌 |
+| `v0.5` | 원고 작업 중 발견: secrets 가 `.xml`(junit.xml 의 hostname) 등도 검사, `check --rerun` 이 ssh 실패 때 죽던 것, PDF 가 막은 주소를 경고, 한글 글꼴 안내 |
 
 설계와 달라진 점은 [DESIGN_CHANGES.md](DESIGN_CHANGES.md), 작업 규칙은 [CLAUDE.md](CLAUDE.md).
 

@@ -177,7 +177,7 @@ def describe_failure(record):
         return record["error"]
     if record["timed_out"]:
         return "시간 초과"
-    if record["stdout"].get("truncated") or record["stderr"].get("truncated"):
+    if record.get("stdout", {}).get("truncated") or record.get("stderr", {}).get("truncated"):
         return "출력이 잘림"
     return f"종료 코드 {record['exit']}"
 

@@ -4,6 +4,7 @@ HTML 은 markdown-it-py(MIT), PDF 는 WeasyPrint(BSD) 가 있어야 한다. 없�
 한 파일에 여러 문서를 넣으므로 제목 앵커는 '<문서>--<제목>' 으로 만들고, 문서 사이 링크(x.md#제목)를 거기에 맞춘다.
 """
 
+import sys
 import html
 import re
 from pathlib import Path, PurePosixPath
@@ -118,6 +119,12 @@ def _allowed(cfg, url):
     return parsed.scheme == "file" and Path(unquote(parsed.path)).resolve().is_relative_to(cfg.root)
 
 
+def _blocked(url):
+    # WeasyPrint 는 가져오기 실패를 조용히 넘기므로(종료 코드 0) 여기서 화면에 알린다(11장 원고 작업 중 발견)
+    print(f"  경고: PDF 에 넣지 않은 주소(저장소 밖·인터넷): {url}", file=sys.stderr)
+    raise ValueError(f"PDF 에서 가져오지 않는 주소: {url}")
+
+
 def url_fetcher(cfg):
     """PDF 를 만들 때 가져올 수 있는 주소: data: 와 저장소 안 file: 만(file:///etc/... 나 바깥 http 차단)."""
     try:
@@ -128,7 +135,7 @@ def url_fetcher(cfg):
         class SafeFetcher(URLFetcher):
             def fetch(self, url, headers=None):
                 if not _allowed(cfg, url):
-                    raise ValueError(f"PDF 에서 가져오지 않는 주소: {url}")
+                    _blocked(url)
                 return super().fetch(url, headers)
         return SafeFetcher(allowed_protocols=("data", "file"))
 
@@ -136,7 +143,7 @@ def url_fetcher(cfg):
 
     def fetch(url, *args, **kwargs):
         if not _allowed(cfg, url):
-            raise ValueError(f"PDF 에서 가져오지 않는 주소: {url}")
+            _blocked(url)
         return default_url_fetcher(url, *args, **kwargs)
     return fetch
 

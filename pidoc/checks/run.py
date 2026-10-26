@@ -48,7 +48,9 @@ def run(ctx):
                 continue
             result, _, _, _ = execute(cfg, cmd, target)
             if not result.ok(cmd["ok_exit"]):
-                record = {"error": result.error, "timed_out": result.timed_out, "exit": result.exit}
+                record = {"error": result.error, "timed_out": result.timed_out, "exit": result.exit,
+                          "stdout": {"truncated": result.stdout_truncated},
+                          "stderr": {"truncated": result.stderr_truncated}}
                 findings.append(Finding(name, fence.start, "run", f"{cmd_id}: 다시 실행 실패 — {describe_failure(record)}"))
                 continue
             fresh = result.stdout.decode("utf-8", errors="replace")

@@ -27,7 +27,7 @@ python3 -m venv .venv
 ```
 
 설치하지 않고 `PYTHONPATH=<pidoc 폴더> python3 -m pidoc ...` 로 돌려도 됩니다.
-PDF 는 시스템에 Pango 가 있어야 하고, 한글 글꼴은 나눔고딕(`NanumGothic`)이 있으면 그것을, 없으면 기본 글꼴을 씁니다.
+PDF 는 시스템에 Pango 가 있어야 하고, 한글 글꼴은 나눔고딕(`NanumGothic`)을 씁니다. **한글 글꼴이 없으면 PDF 는 종료 코드 0 으로 만들어지지만 한글이 네모 상자로 나옵니다** — 만든 뒤 `pdffonts` 로 한글 글꼴이 들어갔는지 보세요.
 
 ## 따라 하기: pimon 문서 만들기 (PC 만으로)
 

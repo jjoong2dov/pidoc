@@ -64,3 +64,21 @@ def test_remote_hostname_is_learned_and_redacted(repo, bindir, monkeypatch, tmp_
     src.mkdir(parents=True, exist_ok=True)
     (src / "a.md").write_text("# 제목\n\n보드 이름은 lab-board-3 입니다.\n")
     assert pidoc("check", "--only", "secrets") == 1
+
+
+def test_describe_failure_without_output_info():
+    """check --rerun 에서 ssh 가 닿지 않을 때 KeyError 로 죽었다(3장 원고 작업 중 발견)."""
+    from pidoc.collect import describe_failure
+    assert describe_failure({"error": None, "timed_out": False, "exit": 255}) == "종료 코드 255"
+
+
+def test_pdf_blocked_url_is_reported(tmp_path, capsys):
+    """WeasyPrint 는 막힌 주소를 조용히 넘긴다 → 화면에 알린다(11장 원고 작업 중 발견)."""
+    import pytest
+    pytest.importorskip("weasyprint")
+    from types import SimpleNamespace
+    from pidoc.build import url_fetcher
+    fetch = url_fetcher(SimpleNamespace(root=tmp_path))
+    with pytest.raises(ValueError):
+        (fetch.fetch if hasattr(fetch, "fetch") else fetch)("file:///etc/hosts")
+    assert "PDF 에 넣지 않은 주소" in capsys.readouterr().err

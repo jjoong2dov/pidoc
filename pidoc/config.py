@@ -12,6 +12,7 @@ HOST_RE = re.compile(r"^(?:[A-Za-z0-9_][\w.-]*@)?[A-Za-z0-9_][\w.-]*$", re.ASCII
 EXTRACTS = {"stdout_all", "stdout_line", "regex", "json"}
 TYPES = {"string", "int", "float", "list", "bool"}
 TARGET_KINDS = {"local", "ssh"}
+MASKS = {"time", "host"}
 
 
 class ConfigError(Exception):
@@ -35,6 +36,8 @@ class Command:
     argv: list[str]
     targets: list[str]
     facts: list[Fact] = field(default_factory=list)
+    mask: list[str] = field(default_factory=list)
+    mask_regex: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -158,7 +161,18 @@ def load(path):
             for f in facts:
                 _need((t, f.key) not in seen_keys, f"{cid}: 사실 키가 겹침: {t}:{f.key}")
                 seen_keys.add((t, f.key))
-        commands.append(Command(cid, list(argv), list(ctargets), facts))
+        # pidoc-run 비교 때 [mask] 로 가릴 것
+        mask = c.get("mask", [])
+        _need(_is_str_list(mask) and set(mask) <= MASKS,
+              f"{cid}: mask 는 time, host 중에서 고른 목록이어야 함: {mask!r}")
+        mask_regex = c.get("mask_regex", [])
+        _need(_is_str_list(mask_regex), f"{cid}: mask_regex 는 문자열 목록이어야 함")
+        for rx in mask_regex:
+            try:
+                re.compile(rx)
+            except re.error as e:
+                raise ConfigError(f"{cid}: mask_regex 가 올바르지 않음: {rx!r}: {e}")
+        commands.append(Command(cid, list(argv), list(ctargets), facts, list(mask), list(mask_regex)))
 
     return Config(
         path=path,

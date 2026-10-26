@@ -1,9 +1,10 @@
-"""pidoc render: docs/src/*.md 의 {{fact:...}} 를 증거와 맞는 사실로 채워 docs/out/ 에 쓴다."""
+"""pidoc render: docs/src/*.md 의 {{fact:...}} 와 pidoc 블록을 채워 docs/out/ 에 쓴다."""
 
 import re
 import sys
 from decimal import ROUND_HALF_UP, Decimal
 
+from pidoc import blocks
 from pidoc.redact import Redactor
 from pidoc.verify import FactsError, load_all, verify
 
@@ -90,18 +91,34 @@ class Resolver:
         return apply(self.facts[tname][key]["value"], tf.strip() if sep else None)
 
 
-def render_text(text, res):
-    """(결과, [(줄, 자리표시자, 까닭)])."""
+def render_text(text, res, first=1):
+    """(결과, [(줄, 자리표시자, 까닭)]). first 는 text 첫 줄의 줄 번호."""
     errors = []
 
     def sub(m):
         try:
             return res.value(m.group(1))
         except RenderError as e:
-            errors.append((text.count("\n", 0, m.start()) + 1, m.group(0), str(e)))
+            errors.append((first + text.count("\n", 0, m.start()), m.group(0), str(e)))
             return m.group(0)
 
     return PLACEHOLDER_RE.sub(sub, text), errors
+
+
+def render_doc(text, res):
+    """자리표시자는 pidoc 블록 밖에서만 채우고, 블록은 파일·증거로 채운다."""
+    out, errors = [], []
+    for line, part in blocks.split(text):
+        if isinstance(part, str):
+            s, errs = render_text(part, res, line)
+            out.append(s)
+            errors += errs
+            continue
+        try:
+            out.append(blocks.fenced(part, blocks.content(res.cfg, part)))
+        except blocks.BlockError as e:
+            errors.append((line, part.label, str(e)))
+    return "".join(out), errors
 
 
 def src_docs(cfg):
@@ -133,7 +150,7 @@ def render(cfg):
             print(f"src/{path.name}: {e}", file=sys.stderr)
             bad += 1
             continue
-        out, errors = render_text(text, res)
+        out, errors = render_doc(text, res)
         for line, ph, why in errors:
             print(f"src/{path.name}:{line}: {ph} — {why}", file=sys.stderr)
         bad += len(errors)

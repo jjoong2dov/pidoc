@@ -58,6 +58,9 @@ class Repo:
                 f"argv = {toml_argv(c['argv'])}",
                 f"targets = {toml_argv(c.get('targets', ['pc']))}",
             ]
+            for k in ("mask", "mask_regex"):
+                if k in c:
+                    lines.append(f"{k} = {toml_argv(c[k])}")
             for f in c.get("facts", []):
                 lines.append("  [[command.fact]]")
                 for k, v in f.items():

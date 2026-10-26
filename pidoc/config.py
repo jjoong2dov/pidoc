@@ -54,6 +54,7 @@ class Config:
         self.ai = data.get("ai", {})
         self.check = data.get("check", {})
         self.mask = data.get("mask", {})
+        self.build = data.get("build", {})
 
     # 자주 쓰는 폴더
     @property
@@ -304,7 +305,15 @@ def _check_mask(cfg):
     _check_patterns(m.get("patterns", []), "mask.patterns")
 
 
-SECTIONS = ("project", "targets", "collect", "command", "redact", "extract", "ai", "check", "mask")
+def _check_build(cfg):
+    b = cfg.build
+    _keys(b, ("title", "order"), "build")
+    if "title" in b:
+        _type(b["title"], "str", "build.title")
+    _type(b.get("order", []), "strlist", "build.order")
+
+
+SECTIONS = ("project", "targets", "collect", "command", "redact", "extract", "ai", "check", "mask", "build")
 
 
 def load(path):
@@ -328,6 +337,7 @@ def load(path):
     _check_ai(cfg)
     _check_check(cfg)
     _check_mask(cfg)
+    _check_build(cfg)
     return cfg
 
 

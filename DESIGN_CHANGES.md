@@ -71,3 +71,9 @@
   찾은 값은 앞 두 글자만 보여 준다(CI 기록에 다시 새지 않게). 255 를 넘는 마디가 있으면 IP 로 보지 않는다.
 - stale: 기본은 .deps.json 의 sha256 비교(+ 원본 문서 자체가 렌더 뒤에 바뀌었는지, render 가 `src_sha256` 를 남김),
   렌더 기록이 없는 문서도 알린다. `--since REV` 는 `git diff --name-only REV --`(작업 트리 포함)로 판단한다.
+
+## build
+- 결과는 `docs/out/site.html`(과 `site.pdf`). 설정 `[build]`: `title`, `order`(docs/src 기준 문서 순서).
+- 한 파일에 여러 문서를 넣으므로 제목 id 를 `<문서>--<제목 앵커>` 로 하고, 문서 사이 링크(`b.md#x`)를 `#b--x` 로 바꾼다.
+  markdown-it 이 링크 주소의 한글을 %인코딩하므로 되돌린 뒤 바꾼다.
+- `--pdf` 는 WeasyPrint 가 없으면 **렌더 전에** 멈춘다(반만 만든 결과가 남지 않게). 렌더가 실패하면 HTML 도 만들지 않는다.

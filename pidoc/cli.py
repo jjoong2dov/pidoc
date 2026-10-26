@@ -70,6 +70,12 @@ def cmd_stale(args):
     return stale(cfg, args.since)
 
 
+def cmd_build(args):
+    from .build import build
+    cfg = load_config(args)
+    return build(cfg, args.pdf)
+
+
 def cmd_facts(args):
     cfg = load_config(args)
     every = facts.load_all(cfg.facts_dir)
@@ -141,6 +147,10 @@ def parser():
     s = sub.add_parser("stale", help="코드가 바뀌어 다시 봐야 할 문서 찾기")
     s.add_argument("--since", metavar="REV", help="git 의 이 판 이후 바뀐 파일로 판단 (예: origin/main)")
     s.set_defaults(func=cmd_stale)
+
+    s = sub.add_parser("build", help="render 후 HTML 한 파일(+ 선택 PDF)")
+    s.add_argument("--pdf", action="store_true", help="PDF 도 만들기 (WeasyPrint 필요)")
+    s.set_defaults(func=cmd_build)
 
     s = sub.add_parser("facts", help="사실 목록 보기")
     s.add_argument("--target", help="이 대상만")

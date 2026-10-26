@@ -41,6 +41,12 @@ def cmd_extract(args):
     return extract(cfg, list(dict.fromkeys(args.kinds)))
 
 
+def cmd_draft(args):
+    from .draft import draft
+    cfg = load_config(args)
+    return draft(cfg, args.template, args.out, args.ai)
+
+
 def cmd_facts(args):
     cfg = load_config(args)
     every = facts.load_all(cfg.facts_dir)
@@ -91,6 +97,12 @@ def parser():
     s = sub.add_parser("extract", help="코드에서 레퍼런스 사실 뽑기(facts/code.json)")
     s.add_argument("kinds", nargs="+", choices=["cli", "config", "http", "py"], help="뽑을 종류")
     s.set_defaults(func=cmd_extract)
+
+    s = sub.add_parser("draft", help="틀 + 사실 목록으로 AI 초안 만들기")
+    s.add_argument("template", help="틀 Markdown")
+    s.add_argument("--out", required=True, help="초안을 쓸 곳 (예: docs/src/usage.md)")
+    s.add_argument("--ai", choices=["claude", "codex", "none"], help="부를 AI (기본: 설정 [ai] provider, 없으면 none)")
+    s.set_defaults(func=cmd_draft)
 
     s = sub.add_parser("facts", help="사실 목록 보기")
     s.add_argument("--target", help="이 대상만")

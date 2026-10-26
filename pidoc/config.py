@@ -50,6 +50,7 @@ class Config:
         self.default_target = project.get("default_target")
         self.redact = data.get("redact", {})
         self.extract = data.get("extract", {})
+        self.ai = data.get("ai", {})
 
     # 자주 쓰는 폴더
     @property
@@ -254,7 +255,18 @@ def _check_extract(cfg):
             _type(e[key], "str", f"extract.{key}")
 
 
-SECTIONS = ("project", "targets", "collect", "command", "redact", "extract")
+def _check_ai(cfg):
+    a = cfg.ai
+    _keys(a, ("provider", "model", "timeout_s"), "ai")
+    if a.get("provider", "none") not in ("claude", "codex", "none"):
+        raise PidocError(f"설정 오류: ai.provider 는 claude | codex | none: {a['provider']!r}")
+    if "model" in a:
+        _type(a["model"], "str", "ai.model")
+    if "timeout_s" in a:
+        _type(a["timeout_s"], "num", "ai.timeout_s")
+
+
+SECTIONS = ("project", "targets", "collect", "command", "redact", "extract", "ai")
 
 
 def load(path):
@@ -275,6 +287,7 @@ def load(path):
     _check_commands(cfg)
     _check_redact(cfg)
     _check_extract(cfg)
+    _check_ai(cfg)
     return cfg
 
 

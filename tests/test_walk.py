@@ -97,9 +97,10 @@ def test_walk_ignores_allow_programs_and_redacts(miniproj, monkeypatch):
 
 
 FAKE_SSH = """\
+for last; do :; done
+if [ "$last" = "uname -n" ]; then echo pi4; exit 0; fi
 printf '%s\\0' "$@" >> "$SSH_LOG"
 printf '\\n' >> "$SSH_LOG"
-for last; do :; done
 sh -c "$last"
 """
 

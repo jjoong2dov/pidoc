@@ -18,7 +18,7 @@ from pathlib import Path
 
 from . import doc as docmod
 from . import evidence, redact, runner
-from .collect import cut_partial_line, ssh_options
+from .collect import cut_partial_line, learn_remote_name, ssh_options
 from .util import COLLECT_FAILED, OK, PidocError, iso, now, sha256_bytes, sha256_file, write_json
 
 CWD_MARK = "__PIDOC_WALK_CWD__="
@@ -82,6 +82,7 @@ def walk(cfg, path, target_name, start=1, dry_run=False):
     started = now()
     walk_dir = evidence.new_run_dir(cfg.docs_dir / "evidence" / "walks", target.name, started)
     timeout = cfg.walk.get("timeout_s", 600)
+    learn_remote_name(cfg, target)
     rules = redact.rules_for(cfg, target)
     # 따라 하기 문서는 독자가 막 로그인한 자리(홈)에서 시작한다. 대상의 cwd 는 collect 용이라 쓰지 않는다
     # (파이 실기에서 cwd = "pimon" 을 그대로 써서, pimon 을 받기도 전에 cd 가 실패했다).

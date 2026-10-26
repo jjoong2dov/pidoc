@@ -50,6 +50,8 @@ patterns = [ { re = '\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b', to = "<ip>" } ]
 
 # 가짜 ssh: 받은 argv 를 NUL 로 구분해 파일에 남기고, 정해 둔 출력을 낸다
 FAKE_SSH = """\
+for last; do :; done
+if [ "$last" = "uname -n" ]; then echo pi4; exit 0; fi
 printf '%s\\0' "$@" > "$SSH_LOG"
 echo "Linux pi4 6.12.47+rpt-rpi-v8 #1 SMP 192.0.2.10 pi4.local"
 """

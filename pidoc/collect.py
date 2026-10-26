@@ -192,6 +192,30 @@ def warn_if_not_ignored(cfg, path):
         say(f"  경고: {cfg.rel(path)} 가 .gitignore 에 없습니다 — docs/.gitignore 에 evidence/private/ 를 넣으세요")
 
 
+def _allowed(cfg, cmd, target):
+    try:
+        check_program(cfg, cmd["argv"], target)
+        return True
+    except PidocError:
+        return False
+
+
+def learn_remote_name(cfg, target):
+    """ssh 대상의 실제 호스트 이름(uname -n)을 알아내 가리기 목록에 기록한다. 실패해도 수집은 계속."""
+    if target.kind != "ssh":
+        return
+    env = runner.build_env(cfg.collect["env_allow"], {})
+    if "SSH_AUTH_SOCK" in os.environ:
+        env["SSH_AUTH_SOCK"] = os.environ["SSH_AUTH_SOCK"]
+    argv = ["ssh", *ssh_options(target), "--", target.host, "uname -n"]
+    result = runner.run(argv, cwd=None, env=env, timeout=cfg.collect["timeout_s"], max_output=4096)
+    name = result.stdout.decode("utf-8", errors="replace").strip()
+    if result.exit == 0 and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.-]{0,252}", name):
+        redact.remember(cfg, target, name)
+    else:
+        say(f"  경고: [{target.name}] 호스트 이름을 알아내지 못했습니다 — 출력의 호스트 이름이 가려지지 않을 수 있습니다([redact] names 에 적으세요)")
+
+
 def collect_target(cfg, target, only=None, keep_raw=False):
     """대상 하나를 수집한다. 실패가 있었으면 False."""
     commands = cfg.commands_for(target.name)
@@ -205,6 +229,8 @@ def collect_target(cfg, target, only=None, keep_raw=False):
     run_dir = evidence.new_run_dir(cfg.runs_dir, target.name, started)
     private = cfg.docs_dir / "evidence" / "private" / run_dir.name
     say(f"[{target.name}] run {run_dir.name}")
+    if any(_allowed(cfg, c, target) for c in commands):   # 실행할 명령이 하나도 없으면 접속하지 않는다
+        learn_remote_name(cfg, target)
     results, new_facts, all_ok = {}, {}, True
     for cmd in commands:
         result, raw_out, raw_err, replaced = execute(cfg, cmd, target)

@@ -8,6 +8,7 @@
 """
 
 import ipaddress
+import json
 import re
 import socket
 from pathlib import Path
@@ -31,9 +32,37 @@ def _with_short(name):
     return names
 
 
+def names_file(cfg):
+    """ssh 대상에서 알아낸 실제 호스트 이름 기록. 공개하지 않는 폴더에 둔다(이름 자체가 가릴 대상이므로)."""
+    return cfg.docs_dir / "evidence" / "private" / "hostnames.json"
+
+
+def remembered(cfg, target):
+    try:
+        return json.loads(names_file(cfg).read_text(encoding="utf-8")).get(target.name, [])
+    except (OSError, ValueError):
+        return []
+
+
+def remember(cfg, target, name):
+    """ssh 대상의 실제 호스트 이름을 기록한다. 주소(IP)만 알고 장비 이름은 모르면 가릴 수 없었다
+    (파이 실기: pimon once 출력의 host 에 파이의 호스트 이름이 그대로 남았다)."""
+    path = names_file(cfg)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        data = {}
+    names = sorted(set(data.get(target.name, [])) | {name})
+    if data.get(target.name) == names:
+        return
+    data[target.name] = names
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def real_names(cfg, target):
     """이 대상의 실제 이름들(긴 것부터)."""
-    names = []
+    names = list(remembered(cfg, target))
     if target.kind == "local":
         names += _with_short(socket.gethostname())
     elif target.host:

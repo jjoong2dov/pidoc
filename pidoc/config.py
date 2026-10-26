@@ -52,6 +52,7 @@ class Config:
         self.extract = data.get("extract", {})
         self.ai = data.get("ai", {})
         self.check = data.get("check", {})
+        self.mask = data.get("mask", {})
 
     # 자주 쓰는 폴더
     @property
@@ -285,7 +286,15 @@ def _check_check(cfg):
         _type(files, "strlist", f"check.stale_deps.{name}")
 
 
-SECTIONS = ("project", "targets", "collect", "command", "redact", "extract", "ai", "check")
+def _check_mask(cfg):
+    m = cfg.mask
+    _keys(m, ("time", "hostname", "pid", "patterns"), "mask")
+    for key in ("time", "hostname", "pid"):
+        _type(m.get(key, True), "bool", f"mask.{key}")
+    _check_patterns(m.get("patterns", []), "mask.patterns")
+
+
+SECTIONS = ("project", "targets", "collect", "command", "redact", "extract", "ai", "check", "mask")
 
 
 def load(path):
@@ -308,6 +317,7 @@ def load(path):
     _check_extract(cfg)
     _check_ai(cfg)
     _check_check(cfg)
+    _check_mask(cfg)
     return cfg
 
 

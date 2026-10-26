@@ -8,7 +8,7 @@
 from pathlib import Path
 
 from . import __version__
-from .util import PidocError, iso, read_json, sha256_bytes, write_json
+from .util import COLLECT_FAILED, PidocError, iso, read_json, sha256_bytes, write_json
 
 
 def new_run_dir(runs_dir, target, started):
@@ -88,7 +88,7 @@ class Run:
         data = (self.path / f"{cmd_id}.stdout").read_bytes()
         expected = self.record(cmd_id)["stdout"]["sha256"]
         if sha256_bytes(data) != expected:
-            raise PidocError(f"{self.path.name}/{cmd_id}.stdout 가 기록된 sha256 과 다릅니다(손댄 증거?)")
+            raise PidocError(f"{self.path.name}/{cmd_id}.stdout 가 기록된 sha256 과 다릅니다(손댄 증거?)", COLLECT_FAILED)
         return data
 
     def command(self, cmd_id):

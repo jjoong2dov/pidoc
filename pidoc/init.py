@@ -30,6 +30,10 @@ targets = ["pc"]
   extract = "regex"
   pattern = 'Python (\\S+)'
   type = "string"
+
+[redact]                     # 수집 직후 증거·사실에 적용(공개용)
+hostname = true              # 실제 hostname → 대상 alias
+patterns = [ {{ re = '\\b(?:\\d{{1,3}}\\.){{3}}\\d{{1,3}}\\b', to = "<ip>" }} ]
 '''
 
 GITIGNORE = """\

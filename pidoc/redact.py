@@ -1,0 +1,71 @@
+"""공개용 가리기: 수집 직후 증거와 사실에서 IP·hostname 같은 값을 바꾼다.
+
+- [redact] patterns: 정규식 → 바꿀 글자 (예: IP → <ip>)
+- hostname = true: 실제 hostname 을 대상 alias 로 바꾼다
+  (로컬 대상은 이 PC 의 hostname, ssh 대상은 host 에 적은 이름, 그리고 [redact] names)
+"""
+
+import ipaddress
+import re
+import socket
+
+SKIP_NAMES = {"localhost", "localhost.localdomain"}
+
+
+def _is_ip(text):
+    try:
+        ipaddress.ip_address(text)
+        return True
+    except ValueError:
+        return False
+
+
+def _with_short(name):
+    """'pi4.local' → ['pi4.local', 'pi4']. IP 는 그대로."""
+    names = [name]
+    if not _is_ip(name) and "." in name:
+        names.append(name.split(".", 1)[0])
+    return names
+
+
+def real_names(cfg, target):
+    """이 대상의 실제 이름들(긴 것부터)."""
+    names = []
+    if target.kind == "local":
+        names += _with_short(socket.gethostname())
+    elif target.host:
+        host = target.host.rsplit("@", 1)[-1]
+        names += _with_short(host)
+    names += cfg.redact.get("names", [])
+    names = {n for n in names if n and len(n) >= 2 and n.lower() not in SKIP_NAMES and n != target.alias}
+    return sorted(names, key=lambda n: (-len(n), n))
+
+
+def name_pattern(name):
+    """이름이 다른 낱말의 일부일 때는 바꾸지 않는다(pi4 가 pi42 를 건드리지 않게)."""
+    return re.compile(r"(?<![A-Za-z0-9_-])" + re.escape(name) + r"(?![A-Za-z0-9_-])")
+
+
+def rules_for(cfg, target):
+    rules = []
+    if cfg.redact.get("hostname", True):
+        rules += [(name_pattern(n), target.alias) for n in real_names(cfg, target)]
+    rules += [(re.compile(p["re"]), p["to"]) for p in cfg.redact.get("patterns", [])]
+    return rules
+
+
+def apply_text(rules, text):
+    count = 0
+    for pattern, to in rules:
+        text, n = pattern.subn(lambda m, to=to: to, text)
+        count += n
+    return text, count
+
+
+def apply_bytes(rules, data):
+    """바이트 → 바이트. UTF-8 이 아닌 바이트는 surrogateescape 로 그대로 지킨다."""
+    if not rules:
+        return data, 0
+    text = data.decode("utf-8", errors="surrogateescape")
+    text, count = apply_text(rules, text)
+    return text.encode("utf-8", errors="surrogateescape"), count

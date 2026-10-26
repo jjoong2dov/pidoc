@@ -26,7 +26,13 @@ def cmd_init(args):
 def cmd_collect(args):
     from .collect import collect
     cfg = load_config(args)
-    return collect(cfg, args.target, args.only)
+    return collect(cfg, args.target, args.only, args.keep_raw)
+
+
+def cmd_replay(args):
+    from .collect import replay
+    cfg = load_config(args)
+    return replay(cfg, args.runs)
 
 
 def cmd_facts(args):
@@ -68,7 +74,13 @@ def parser():
     s = sub.add_parser("collect", help="명령 실행 → 증거 저장 → 사실 갱신")
     s.add_argument("--target", help="이 대상만")
     s.add_argument("--only", nargs="+", metavar="ID", help="이 명령들만")
+    s.add_argument("--keep-raw", action="store_true",
+                   help="가리기 전 원본을 docs/evidence/private/ 에도 저장(공개 저장소에 넣지 말 것)")
     s.set_defaults(func=cmd_collect)
+
+    s = sub.add_parser("replay", help="저장된 증거에서 사실만 다시 뽑기(실행 안 함)")
+    s.add_argument("runs", help="run 폴더 하나 또는 runs 폴더")
+    s.set_defaults(func=cmd_replay)
 
     s = sub.add_parser("facts", help="사실 목록 보기")
     s.add_argument("--target", help="이 대상만")

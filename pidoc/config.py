@@ -48,6 +48,7 @@ class Config:
         self.commands = data.get("command", [])
         self.collect = dict(COLLECT_DEFAULTS, **data.get("collect", {}))
         self.default_target = project.get("default_target")
+        self.redact = data.get("redact", {})
 
     # 자주 쓰는 폴더
     @property
@@ -221,7 +222,29 @@ def _check_commands(cfg):
                 keys[(t, rule["key"])] = cid
 
 
-SECTIONS = ("project", "targets", "collect", "command")
+def _check_patterns(items, where):
+    if not isinstance(items, list):
+        raise PidocError(f"설정 오류: {where} 는 [{{ re = '...', to = '...' }}] 목록이어야 합니다")
+    for i, item in enumerate(items):
+        _keys(item, ("re", "to"), f"{where}[{i}]")
+        _type(item.get("re"), "str", f"{where}[{i}].re")
+        if not isinstance(item.get("to"), str):
+            raise PidocError(f"설정 오류: {where}[{i}].to 는 문자열이어야 합니다")
+        try:
+            re.compile(item["re"])
+        except re.error as e:
+            raise PidocError(f"설정 오류: {where}[{i}].re 정규식 오류: {e}")
+
+
+def _check_redact(cfg):
+    r = cfg.redact
+    _keys(r, ("patterns", "hostname", "names"), "redact")
+    _check_patterns(r.get("patterns", []), "redact.patterns")
+    _type(r.get("hostname", True), "bool", "redact.hostname")
+    _type(r.get("names", []), "strlist", "redact.names")
+
+
+SECTIONS = ("project", "targets", "collect", "command", "redact")
 
 
 def load(path):
@@ -240,6 +263,7 @@ def load(path):
     _check_targets(cfg, data)
     _check_collect(cfg)
     _check_commands(cfg)
+    _check_redact(cfg)
     return cfg
 
 

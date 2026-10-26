@@ -1,0 +1,73 @@
+{
+  "alias": "pi4",
+  "facts": {
+    "pimon.level": {
+      "collected_at": "2026-10-26T19:52:31+09:00",
+      "command": "pimon_once_pi",
+      "extract": "json",
+      "max_age_days": null,
+      "run": "20261026T195228-pi",
+      "source_sha256": "e17d553d0aeab53e8a19151484c4ea510ec3796d473c1e34a36cc03207f5fedb",
+      "type": "string",
+      "value": "ok"
+    },
+    "pimon.subcommands": {
+      "collected_at": "2026-10-26T19:52:30+09:00",
+      "command": "pimon_help",
+      "extract": "regex",
+      "max_age_days": null,
+      "run": "20261026T195228-pi",
+      "source_sha256": "a90dd7e4a6f0ac362586b401fe26439ed40f6a36d153d556e989d726d04844d1",
+      "type": "list",
+      "value": [
+        "once",
+        "run",
+        "check-config",
+        "health",
+        "restore-led"
+      ]
+    },
+    "system.board_model": {
+      "collected_at": "2026-10-26T19:52:30+09:00",
+      "command": "board_model",
+      "extract": "regex",
+      "max_age_days": null,
+      "run": "20261026T195228-pi",
+      "source_sha256": "0683aee4111441fa85250b93dfb06727b319da7b323c4672b0650aaf64b848c3",
+      "type": "string",
+      "value": "Raspberry Pi 4 Model B Rev 1.2"
+    },
+    "system.kernel_release": {
+      "collected_at": "2026-10-26T19:52:30+09:00",
+      "command": "kernel",
+      "extract": "stdout_line",
+      "max_age_days": null,
+      "run": "20261026T195228-pi",
+      "source_sha256": "cd0b5b604b302fc7a732677761f567a68e440a7235056035a6d194b8ac4d594d",
+      "type": "string",
+      "value": "6.18.50+rpt-rpi-v8"
+    },
+    "system.os_name": {
+      "collected_at": "2026-10-26T19:52:30+09:00",
+      "command": "os_release",
+      "extract": "regex",
+      "max_age_days": null,
+      "run": "20261026T195228-pi",
+      "source_sha256": "e249e69c32d81350fdd6b05ac5575255f14e380ba14b8454acea14e49f088bfa",
+      "type": "string",
+      "value": "Debian GNU/Linux 13 (trixie)"
+    },
+    "system.python_version": {
+      "collected_at": "2026-10-26T19:52:29+09:00",
+      "command": "python_version",
+      "extract": "regex",
+      "max_age_days": null,
+      "run": "20261026T195228-pi",
+      "source_sha256": "01870de7caca112afeefd77b3c3b4c5e263cf5539a33af3f3411100727fad7d3",
+      "type": "string",
+      "value": "3.13.5"
+    }
+  },
+  "schema": 1,
+  "target": "pi"
+}

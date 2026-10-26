@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "cat",
+    "/proc/device-tree/model"
+  ],
+  "cwd": ".",
+  "duration_ms": 265,
+  "error": null,
+  "exit": 0,
+  "finished_at": "2026-10-26T19:52:30+09:00",
+  "id": "board_model",
+  "redacted": 0,
+  "stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "truncated": false
+  },
+  "stdout": {
+    "bytes": 31,
+    "sha256": "0683aee4111441fa85250b93dfb06727b319da7b323c4672b0650aaf64b848c3",
+    "truncated": false
+  },
+  "timed_out": false,
+  "transport": "ssh"
+}

@@ -1,0 +1,21 @@
+{
+  "duration_ms": 466,
+  "error": null,
+  "exit": 0,
+  "finished_at": "2026-10-26T19:52:10+09:00",
+  "line": 29,
+  "ok": true,
+  "redacted": 0,
+  "stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "truncated": false
+  },
+  "stdout": {
+    "bytes": 14,
+    "sha256": "01870de7caca112afeefd77b3c3b4c5e263cf5539a33af3f3411100727fad7d3",
+    "truncated": false
+  },
+  "step": 2,
+  "timed_out": false
+}

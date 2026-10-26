@@ -1,0 +1,15 @@
+active
+● pimon.service - pimon 라즈베리 파이 상태 모니터
+     Loaded: loaded (/etc/systemd/system/pimon.service; enabled; preset: enabled)
+     Active: active (running) since Mon 2026-10-26 10:52:15 GMT; 3s ago
+ Invocation: 8d27ddd1b27c4d12817f15ad4b9a361b
+   Main PID: 2830 (python3)
+      Tasks: 2 (limit: 3967)
+        CPU: 340ms
+     CGroup: /system.slice/pimon.service
+             └─2830 /usr/bin/python3 -m pimon run --config /etc/pimon/pimon.toml
+
+Oct 26 10:52:15 pi4 systemd[1]: Started pimon.service - pimon 라즈베리 파이 상태 모니터.
+Oct 26 10:52:15 pi4 python3[2830]: LED ACT 사용 (원래 trigger: mmc0, 지금 상태)
+Oct 26 10:52:15 pi4 python3[2830]: http://<ip>:8080/ 에서 대기, 5초마다 수집
+Oct 26 10:52:15 pi4 python3[2830]: 상태 None -> ok

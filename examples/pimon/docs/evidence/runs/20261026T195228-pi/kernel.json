@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "uname",
+    "-r"
+  ],
+  "cwd": ".",
+  "duration_ms": 265,
+  "error": null,
+  "exit": 0,
+  "finished_at": "2026-10-26T19:52:30+09:00",
+  "id": "kernel",
+  "redacted": 0,
+  "stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "truncated": false
+  },
+  "stdout": {
+    "bytes": 19,
+    "sha256": "cd0b5b604b302fc7a732677761f567a68e440a7235056035a6d194b8ac4d594d",
+    "truncated": false
+  },
+  "timed_out": false,
+  "transport": "ssh"
+}

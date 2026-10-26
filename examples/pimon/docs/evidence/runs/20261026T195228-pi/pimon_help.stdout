@@ -1,0 +1,14 @@
+usage: pimon [-h] [--config CONFIG] [--root ROOT] [--state-dir STATE_DIR]
+             {once,run,check-config,health,restore-led}
+
+라즈베리 파이 상태 모니터
+
+positional arguments:
+  {once,run,check-config,health,restore-led}
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG       설정 파일 (없으면 기본값)
+  --root ROOT           설정의 root 를 덮어씀 (가짜 파이 폴더)
+  --state-dir STATE_DIR
+                        설정의 state_dir 을 덮어씀

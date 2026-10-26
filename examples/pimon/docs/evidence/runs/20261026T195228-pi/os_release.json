@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "cat",
+    "/etc/os-release"
+  ],
+  "cwd": ".",
+  "duration_ms": 316,
+  "error": null,
+  "exit": 0,
+  "finished_at": "2026-10-26T19:52:30+09:00",
+  "id": "os_release",
+  "redacted": 0,
+  "stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "truncated": false
+  },
+  "stdout": {
+    "bytes": 286,
+    "sha256": "e249e69c32d81350fdd6b05ac5575255f14e380ba14b8454acea14e49f088bfa",
+    "truncated": false
+  },
+  "timed_out": false,
+  "transport": "ssh"
+}

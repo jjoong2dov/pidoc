@@ -1,0 +1,27 @@
+{
+  "argv": [
+    "python3",
+    "-m",
+    "pimon",
+    "--help"
+  ],
+  "cwd": "pimon",
+  "duration_ms": 566,
+  "error": null,
+  "exit": 0,
+  "finished_at": "2026-10-26T19:52:30+09:00",
+  "id": "pimon_help",
+  "redacted": 0,
+  "stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "truncated": false
+  },
+  "stdout": {
+    "bytes": 520,
+    "sha256": "a90dd7e4a6f0ac362586b401fe26439ed40f6a36d153d556e989d726d04844d1",
+    "truncated": false
+  },
+  "timed_out": false,
+  "transport": "ssh"
+}

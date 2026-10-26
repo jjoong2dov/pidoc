@@ -1,0 +1,47 @@
+{
+  "time": "2026-10-26T10:52:11+00:00",
+  "host": "pi4",
+  "level": "ok",
+  "checks": {
+    "temp": {
+      "value": 55.0,
+      "unit": "C",
+      "level": "ok",
+      "detail": ""
+    },
+    "throttled": {
+      "value": "0x0",
+      "flags": [],
+      "level": "ok",
+      "detail": ""
+    },
+    "disk": {
+      "value": 29.0,
+      "unit": "%",
+      "free_mb": 9756,
+      "level": "ok",
+      "detail": ""
+    },
+    "mem": {
+      "value": 7.5,
+      "unit": "%",
+      "avail_mb": 3512,
+      "level": "ok",
+      "detail": ""
+    },
+    "link": {
+      "value": "up",
+      "speed": 1000,
+      "level": "ok",
+      "detail": ""
+    },
+    "load": {
+      "value": 0.8,
+      "load5": 0.31,
+      "load15": 0.12,
+      "uptime_s": 110,
+      "level": "ok",
+      "detail": ""
+    }
+  }
+}

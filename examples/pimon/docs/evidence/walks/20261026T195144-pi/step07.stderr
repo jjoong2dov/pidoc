@@ -1,0 +1,1 @@
+Created symlink '/etc/systemd/system/multi-user.target.wants/pimon.service' → '/etc/systemd/system/pimon.service'.

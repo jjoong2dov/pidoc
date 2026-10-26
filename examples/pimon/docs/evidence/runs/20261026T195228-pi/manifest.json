@@ -1,0 +1,176 @@
+{
+  "alias": "pi4",
+  "commands": [
+    {
+      "argv": [
+        "python3",
+        "--version"
+      ],
+      "cwd": ".",
+      "fact": [
+        {
+          "extract": "regex",
+          "key": "system.python_version",
+          "pattern": "Python (\\S+)",
+          "type": "string"
+        }
+      ],
+      "id": "python_version",
+      "ok_exit": [
+        0
+      ],
+      "targets": [
+        "pc",
+        "pi"
+      ]
+    },
+    {
+      "argv": [
+        "python3",
+        "-m",
+        "pimon",
+        "--help"
+      ],
+      "fact": [
+        {
+          "extract": "regex",
+          "key": "pimon.subcommands",
+          "pattern": "\\{([a-z,-]+)\\}",
+          "type": "list"
+        }
+      ],
+      "id": "pimon_help",
+      "ok_exit": [
+        0
+      ],
+      "targets": [
+        "pc",
+        "pi"
+      ]
+    },
+    {
+      "argv": [
+        "uname",
+        "-r"
+      ],
+      "cwd": ".",
+      "fact": [
+        {
+          "extract": "stdout_line",
+          "key": "system.kernel_release",
+          "type": "string"
+        }
+      ],
+      "id": "kernel",
+      "ok_exit": [
+        0
+      ],
+      "targets": [
+        "pi"
+      ]
+    },
+    {
+      "argv": [
+        "cat",
+        "/proc/device-tree/model"
+      ],
+      "cwd": ".",
+      "fact": [
+        {
+          "extract": "regex",
+          "key": "system.board_model",
+          "pattern": "([^\\x00]+)",
+          "type": "string"
+        }
+      ],
+      "id": "board_model",
+      "ok_exit": [
+        0
+      ],
+      "targets": [
+        "pi"
+      ]
+    },
+    {
+      "argv": [
+        "cat",
+        "/etc/os-release"
+      ],
+      "cwd": ".",
+      "fact": [
+        {
+          "extract": "regex",
+          "key": "system.os_name",
+          "pattern": "PRETTY_NAME=\"([^\"]+)\"",
+          "type": "string"
+        }
+      ],
+      "id": "os_release",
+      "ok_exit": [
+        0
+      ],
+      "targets": [
+        "pi"
+      ]
+    },
+    {
+      "argv": [
+        "python3",
+        "-m",
+        "pimon",
+        "once"
+      ],
+      "fact": [
+        {
+          "extract": "json",
+          "key": "pimon.level",
+          "path": "level",
+          "type": "string"
+        }
+      ],
+      "id": "pimon_once_pi",
+      "ok_exit": [
+        0,
+        1,
+        2
+      ],
+      "targets": [
+        "pi"
+      ]
+    }
+  ],
+  "config_sha256": "e064336cc60613eb9ef752dfa3b47ba559680c409155b770bae3e4b3dc3f0746",
+  "finished_at": "2026-10-26T19:52:31+09:00",
+  "kind": "ssh",
+  "pidoc_version": "0.1.0",
+  "results": {
+    "board_model": {
+      "exit": 0,
+      "ok": true
+    },
+    "kernel": {
+      "exit": 0,
+      "ok": true
+    },
+    "os_release": {
+      "exit": 0,
+      "ok": true
+    },
+    "pimon_help": {
+      "exit": 0,
+      "ok": true
+    },
+    "pimon_once_pi": {
+      "exit": 0,
+      "ok": true
+    },
+    "python_version": {
+      "exit": 0,
+      "ok": true
+    }
+  },
+  "run": "20261026T195228-pi",
+  "schema": 1,
+  "started_at": "2026-10-26T19:52:28+09:00",
+  "target": "pi"
+}

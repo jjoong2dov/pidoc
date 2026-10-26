@@ -1,0 +1,50 @@
+Hit:1 http://deb.debian.org/debian trixie InRelease
+Get:2 http://deb.debian.org/debian trixie-updates InRelease [47.3 kB]
+Get:3 http://deb.debian.org/debian-security trixie-security InRelease [43.4 kB]
+Get:4 http://deb.debian.org/debian trixie-updates/main arm64 Packages.diff/Index [6117 B]
+Get:5 http://deb.debian.org/debian trixie-updates/main armhf Packages.diff/Index [6117 B]
+Get:6 http://deb.debian.org/debian trixie-updates/main Translation-en.diff/Index [6117 B]
+Get:7 http://deb.debian.org/debian trixie-updates/main arm64 Packages T-2026-10-22-2004.53-F-2026-10-22-2004.53.pdiff [663 B]
+Get:8 http://deb.debian.org/debian trixie-updates/main armhf Packages T-2026-10-22-2004.53-F-2026-10-22-2004.53.pdiff [663 B]
+Get:7 http://deb.debian.org/debian trixie-updates/main arm64 Packages T-2026-10-22-2004.53-F-2026-10-22-2004.53.pdiff [663 B]
+Get:8 http://deb.debian.org/debian trixie-updates/main armhf Packages T-2026-10-22-2004.53-F-2026-10-22-2004.53.pdiff [663 B]
+Get:9 http://deb.debian.org/debian trixie-updates/main Translation-en T-2026-10-22-2004.53-F-2026-10-22-2004.53.pdiff [674 B]
+Get:9 http://deb.debian.org/debian trixie-updates/main Translation-en T-2026-10-22-2004.53-F-2026-10-22-2004.53.pdiff [674 B]
+Get:10 http://deb.debian.org/debian-security trixie-security/main armhf Packages [254 kB]
+Get:11 http://deb.debian.org/debian-security trixie-security/main arm64 Packages [271 kB]
+Get:12 http://deb.debian.org/debian-security trixie-security/main Translation-en [166 kB]
+Get:13 http://archive.raspberrypi.com/debian trixie InRelease [54.9 kB]
+Get:14 http://archive.raspberrypi.com/debian trixie/main arm64 Packages [492 kB]
+Get:15 http://archive.raspberrypi.com/debian trixie/main armhf Packages [481 kB]
+Fetched 1830 kB in 4s (515 kB/s)
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  git-man liberror-perl
+Suggested packages:
+  git-doc git-email git-gui gitk gitweb git-cvs git-mediawiki git-svn
+The following NEW packages will be installed:
+  git git-man liberror-perl
+0 upgraded, 3 newly installed, 0 to remove and 21 not upgraded.
+Need to get 10.9 MB of archives.
+After this operation, 53.1 MB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian trixie/main arm64 liberror-perl all 0.17030-1 [26.9 kB]
+Get:2 http://deb.debian.org/debian trixie/main arm64 git-man all 1:2.47.3-0+deb13u1 [2205 kB]
+Get:3 http://deb.debian.org/debian trixie/main arm64 git arm64 1:2.47.3-0+deb13u1 [8666 kB]
+Fetched 10.9 MB in 1s (12.3 MB/s)
+Selecting previously unselected package liberror-perl.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 66776 files and directories currently installed.)
+Preparing to unpack .../liberror-perl_0.17030-1_all.deb ...
+Unpacking liberror-perl (0.17030-1) ...
+Selecting previously unselected package git-man.
+Preparing to unpack .../git-man_1%3a2.47.3-0+deb13u1_all.deb ...
+Unpacking git-man (1:2.47.3-0+deb13u1) ...
+Selecting previously unselected package git.
+Preparing to unpack .../git_1%3a2.47.3-0+deb13u1_arm64.deb ...
+Unpacking git (1:2.47.3-0+deb13u1) ...
+Setting up liberror-perl (0.17030-1) ...
+Setting up git-man (1:2.47.3-0+deb13u1) ...
+Setting up git (1:2.47.3-0+deb13u1) ...
+Processing triggers for man-db (2.13.1-1) ...

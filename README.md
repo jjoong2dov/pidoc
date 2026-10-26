@@ -254,6 +254,7 @@ pidoc draft 틀.md --out docs/src/usage.md --ai none      # 부르지 않고 프
 | `v0.1` | pimon 견본(examples/pimon)·README |
 | `v0.2-review1` | Codex 코드 리뷰 1차 반영([REVIEW1.md](REVIEW1.md)) + `pidoc walk`. 13장(파이 실기)의 출발점 |
 | `v0.3-pi` | 13장 파이 실기에서 찾아 고친 것: 대상별 `known_hosts`, 이 PC 홈 경로 가리기, walk 시작 폴더, ssh 대상의 실제 호스트 이름 가리기. 예제에 파이 설치 튜토리얼(`examples/pimon/docs/src/pi-install.md`) |
+| `v0.4` | 12장 응용 실행에서 고친 것: i18n-check 링크를 문서 위치 기준으로 비교, git 사실의 숫자로만 된 커밋 해시를 숫자 검사에서 뺌 |
 
 설계와 달라진 점은 [DESIGN_CHANGES.md](DESIGN_CHANGES.md), 작업 규칙은 [CLAUDE.md](CLAUDE.md).
 

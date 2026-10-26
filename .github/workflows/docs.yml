@@ -1,0 +1,34 @@
+# 이 책 10장의 CI 예: pidoc 시험 + pimon 문서(예제)를 다시 수집·렌더·검사한다.
+# 파이 사실은 저장소의 증거 묶음을 replay 한다(CI 에는 파이가 없다).
+name: docs
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  docs:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: jjoong2dov/pimon
+          path: pimon
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[html]" pytest
+      - run: python -m pytest -q
+      - name: 예제 문서 준비
+        run: cp -r examples/pimon/docs/pidoc.toml examples/pimon/docs/terms.toml examples/pimon/docs/src examples/pimon/docs/evidence pimon/docs/
+      - name: 금지어 목록(비밀 값이 있으면)
+        env:
+          BANNED: ${{ secrets.PIDOC_BANNED }}
+        run: |
+          if [ -n "$BANNED" ]; then printf '%s\n' "$BANNED" > pimon/docs/banned.txt; echo "banned.txt 만듦"; else echo "PIDOC_BANNED 비밀 값 없음 — 금지어 검사는 건너뜀"; fi
+      - name: 수집·추출·렌더·검사
+        working-directory: pimon/docs
+        run: |
+          pidoc replay evidence/runs/20261026T195228-pi
+          pidoc collect --target pc
+          pidoc extract cli config http py
+          pidoc render
+          pidoc check --only facts numbers quote links terms secrets
+          pidoc stale

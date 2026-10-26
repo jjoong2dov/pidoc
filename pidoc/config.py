@@ -68,6 +68,14 @@ class Config:
     def facts_dir(self):
         return self.docs / "facts"
 
+    @property
+    def src_dir(self):
+        return self.docs / "src"
+
+    @property
+    def out_dir(self):
+        return self.docs / "out"
+
 
 def _need(cond, msg):
     if not cond:

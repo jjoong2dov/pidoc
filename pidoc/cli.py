@@ -4,9 +4,11 @@ import argparse
 import sys
 
 from pidoc import config
+from pidoc.check import CHECKS, check
 from pidoc.collect import collect
 from pidoc.draft import draft
 from pidoc.facts import build_facts
+from pidoc.render import render
 
 
 def parser():
@@ -23,6 +25,12 @@ def parser():
     d.add_argument("--out", help="초안을 쓸 파일(--ai none 이면 쓰지 않음)")
     d.add_argument("--ai", required=True, choices=["claude", "codex", "none"],
                    help="부를 AI(none 이면 프롬프트만 저장)")
+    r = sub.add_parser("render", help="docs/src 의 사실 자리표시자를 채워 docs/out 에 쓴다")
+    r.add_argument("--config", default="docs/pidoc.toml", help="설정 파일(기본 docs/pidoc.toml)")
+    k = sub.add_parser("check", help="문서를 검사한다")
+    k.add_argument("--config", default="docs/pidoc.toml", help="설정 파일(기본 docs/pidoc.toml)")
+    k.add_argument("--only", nargs="+", choices=CHECKS, metavar="검사",
+                   help="할 검사만(facts, numbers). 기본은 전부")
     return p
 
 
@@ -37,4 +45,8 @@ def main(argv=None):
         return collect(cfg)
     if args.cmd == "draft":
         return draft(cfg, args.template, args.out, args.ai)
+    if args.cmd == "render":
+        return render(cfg)
+    if args.cmd == "check":
+        return check(cfg, args.only)
     return build_facts(cfg, args.run)

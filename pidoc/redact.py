@@ -3,11 +3,14 @@
 - [redact] patterns: 정규식 → 바꿀 글자 (예: IP → <ip>)
 - hostname = true: 실제 hostname 을 대상 alias 로 바꾼다
   (로컬 대상은 이 PC 의 hostname, ssh 대상은 host 에 적은 이름, 그리고 [redact] names)
+- home = true: 이 PC 의 홈 폴더 경로를 ~ 로 바꾼다. ssh 오류 메시지처럼 로컬 프로그램이
+  찍는 경로에도 사용자 이름이 들어간다(파이 실기에서 known_hosts 경로가 증거에 남았다).
 """
 
 import ipaddress
 import re
 import socket
+from pathlib import Path
 
 SKIP_NAMES = {"localhost", "localhost.localdomain"}
 
@@ -50,6 +53,10 @@ def rules_for(cfg, target):
     rules = []
     if cfg.redact.get("hostname", True):
         rules += [(name_pattern(n), target.alias) for n in real_names(cfg, target)]
+    if cfg.redact.get("home", True):
+        home = str(Path.home())
+        if home not in ("/", "") and len(home) > 1:
+            rules.append((re.compile(re.escape(home) + r"(?![A-Za-z0-9_.-])"), "~"))
     rules += [(re.compile(p["re"]), p["to"]) for p in cfg.redact.get("patterns", [])]
     return rules
 

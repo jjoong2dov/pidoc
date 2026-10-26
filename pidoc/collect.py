@@ -13,6 +13,14 @@ from .util import COLLECT_FAILED, OK, PidocError, iso, now
 SSH_OPTIONS = ["-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10"]
 
 
+def ssh_options(target):
+    """ssh 옵션. 대상에 known_hosts 를 적었으면 그 파일만 쓴다."""
+    opts = list(SSH_OPTIONS)
+    if target.known_hosts:
+        opts += ["-o", f"UserKnownHostsFile={target.known_hosts}"]
+    return opts
+
+
 def say(msg):
     print(msg, flush=True)
 
@@ -87,7 +95,7 @@ def ssh_argv(cfg, cmd, target):
     cwd = cmd.get("cwd") or target.cwd
     if cwd:
         line = f"cd {shlex.quote(cwd)} && {line}"
-    return ["ssh", *SSH_OPTIONS, "--", target.host, line]
+    return ["ssh", *ssh_options(target), "--", target.host, line]
 
 
 def plan(cfg, cmd, target):

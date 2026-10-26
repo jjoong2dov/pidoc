@@ -17,7 +17,7 @@ from pathlib import Path
 
 from . import doc as docmod
 from . import evidence, redact, runner
-from .collect import SSH_OPTIONS, cut_partial_line
+from .collect import cut_partial_line, ssh_options
 from .util import COLLECT_FAILED, OK, PidocError, iso, now, sha256_bytes, sha256_file, write_json
 
 CWD_MARK = "__PIDOC_WALK_CWD__="
@@ -53,7 +53,7 @@ def plan(cfg, target, script, cwd):
     if target.kind == "ssh":
         if "SSH_AUTH_SOCK" in os.environ:
             env["SSH_AUTH_SOCK"] = os.environ["SSH_AUTH_SOCK"]
-        return ["ssh", *SSH_OPTIONS, "--", target.host, shlex.join(bash)], None, env
+        return ["ssh", *ssh_options(target), "--", target.host, shlex.join(bash)], None, env
     return bash, cwd, env
 
 

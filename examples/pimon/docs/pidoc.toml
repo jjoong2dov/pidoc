@@ -13,6 +13,7 @@ kind = "ssh"
 host = "pi@pi4.local"        # 실제 주소는 PIDOC_TARGET_PI 환경변수로 덮어쓴다
 alias = "pi4"
 cwd = "pimon"                # 파이 안에서 pimon 을 받아 둔 폴더(홈 기준)
+known_hosts = "pi.known_hosts"  # 이 파이의 호스트 키만 따로(새로 구우면 이 파일만 지우면 된다)
 
 [collect]
 timeout_s = 20

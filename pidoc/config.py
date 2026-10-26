@@ -39,6 +39,7 @@ class Target:
     alias: str                # 문서에 나갈 이름
     host: str | None = None   # ssh 대상의 주소(공개 증거에는 남기지 않음)
     cwd: str | None = None
+    known_hosts: str | None = None  # ssh 호스트 키 파일(절대 경로). 없으면 ssh 기본(~/.ssh/known_hosts)
 
 
 class Config:
@@ -144,7 +145,7 @@ def _check_targets(cfg, data):
         where = f"targets.{name}"
         if not ID_RE.match(name):
             raise PidocError(f"설정 오류: 대상 이름은 소문자·숫자·_·- 만: {name!r}")
-        _keys(t, ("kind", "host", "alias", "cwd"), where)
+        _keys(t, ("kind", "host", "alias", "cwd", "known_hosts"), where)
         kind = t.get("kind", "local")
         if kind not in ("local", "ssh"):
             raise PidocError(f"설정 오류: {where}.kind 는 local 또는 ssh: {kind!r}")
@@ -162,7 +163,13 @@ def _check_targets(cfg, data):
             _type(t["cwd"], "str", f"{where}.cwd")
         if kind == "local" and "cwd" in t:
             cfg.inside(t["cwd"], f"{where}.cwd")
-        cfg.targets[name] = Target(name, kind, alias, host, t.get("cwd"))
+        known_hosts = None
+        if "known_hosts" in t:
+            # 같은 주소에 OS 를 새로 구우면 호스트 키가 바뀐다. 대상마다 키 파일을 따로 두면
+            # 평소 쓰는 ~/.ssh/known_hosts 를 건드리지 않고 이 대상의 키만 관리할 수 있다.
+            _type(t["known_hosts"], "str", f"{where}.known_hosts")
+            known_hosts = str((cfg.docs_dir / t["known_hosts"]).resolve())
+        cfg.targets[name] = Target(name, kind, alias, host, t.get("cwd"), known_hosts)
     default = cfg.default_target or next(iter(cfg.targets))
     if default not in cfg.targets:
         raise PidocError(f"설정 오류: project.default_target 이 없는 대상입니다: {default!r}")
@@ -269,10 +276,11 @@ def _check_patterns(items, where):
 
 def _check_redact(cfg):
     r = cfg.redact
-    _keys(r, ("patterns", "hostname", "names"), "redact")
+    _keys(r, ("patterns", "hostname", "names", "home"), "redact")
     _check_patterns(r.get("patterns", []), "redact.patterns")
     _type(r.get("hostname", True), "bool", "redact.hostname")
     _type(r.get("names", []), "strlist", "redact.names")
+    _type(r.get("home", True), "bool", "redact.home")
 
 
 def _check_extract(cfg):

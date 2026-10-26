@@ -1,0 +1,108 @@
+# pimon 용 pidoc 설정 견본. pimon 저장소의 docs/ 에 복사해 쓴다.
+[project]
+name = "pimon"
+root = ".."                  # pimon 저장소 루트
+default_target = "pc"
+
+[targets.pc]
+kind = "local"
+alias = "devpc"              # 문서에 나갈 이름
+
+[targets.pi]
+kind = "ssh"
+host = "pi@pi4.local"        # 실제 주소는 PIDOC_TARGET_PI 환경변수로 덮어쓴다
+alias = "pi4"
+cwd = "pimon"                # 파이 안에서 pimon 을 받아 둔 폴더(홈 기준)
+
+[collect]
+timeout_s = 20
+max_output = 1048576
+env_allow = ["PATH", "HOME", "LANG"]
+env_set = { LC_ALL = "C.UTF-8" }
+allow_programs = ["python3", "uname"]
+
+# 가짜 파이 폴더를 새로 만든다(사실은 없음, 다음 명령의 준비)
+[[command]]
+id = "fake_pi"
+argv = ["python3", "fake/make_fake.py", "fake/pi", "--fresh"]
+targets = ["pc"]
+
+[[command]]
+id = "python_version"
+argv = ["python3", "--version"]
+targets = ["pc", "pi"]
+  [[command.fact]]
+  key = "system.python_version"
+  extract = "regex"
+  pattern = 'Python (\S+)'
+
+[[command]]
+id = "pimon_help"
+argv = ["python3", "-m", "pimon", "--help"]
+targets = ["pc", "pi"]
+  [[command.fact]]
+  key = "pimon.subcommands"
+  extract = "regex"
+  pattern = '\{([a-z,-]+)\}'
+  type = "list"
+
+[[command]]
+id = "pimon_once"
+argv = ["python3", "-m", "pimon", "once", "--root", "fake/pi", "--state-dir", "fake/state"]
+targets = ["pc"]
+ok_exit = [0, 1, 2]          # pimon once 는 상태를 종료 코드로 알린다(0 정상, 1 주의·모름, 2 경고)
+  [[command.fact]]
+  key = "pimon.fake.level"
+  extract = "json"
+  path = "level"
+  [[command.fact]]
+  key = "pimon.fake.temp"
+  extract = "json"
+  path = "checks.temp.value"
+  type = "float"
+  [[command.fact]]
+  key = "pimon.fake.link_speed"
+  extract = "json"
+  path = "checks.link.speed"
+  type = "int"
+
+[[command]]
+id = "check_config"
+argv = ["python3", "-m", "pimon", "check-config", "--config", "pimon.toml.example"]
+targets = ["pc"]
+  [[command.fact]]
+  key = "pimon.check_config_message"
+  extract = "stdout_line"
+
+[[command]]
+id = "kernel"
+argv = ["uname", "-r"]
+targets = ["pi"]
+  [[command.fact]]
+  key = "system.kernel_release"
+  extract = "stdout_line"
+
+[redact]
+hostname = true              # 실제 hostname → alias (pimon once 의 "host" 값)
+patterns = [ { re = '\b(?:\d{1,3}\.){3}\d{1,3}\b', to = "<ip>" } ]
+
+[extract]
+paths = ["pimon"]
+config_example = "pimon.toml.example"
+config_module = "pimon/config.py"
+
+[check]
+numbers = "error"
+number_allow = ["Python 3", "HTTP 200"]
+stale_deps = { "docs/src/reference.md" = ["pimon/__main__.py", "pimon/config.py", "pimon/server.py", "pimon.toml.example"] }
+
+[mask]
+# 디스크·메모리 사용률과 남은 용량은 PC 마다 다르다 → 비교할 때만 가린다
+patterns = [
+  { re = '"value": [0-9.]+(,\s+"unit": "%")', to = '"value": <n>\1' },
+  { re = '"(free_mb|avail_mb)": \d+', to = '"\1": <n>' },
+]
+
+[build]
+title = "pimon 문서"
+order = ["quickstart.md", "reference.md"]

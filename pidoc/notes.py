@@ -85,7 +85,12 @@ def report_problems(cfg, out, text, commits):
     for n, h in bad_hashes(text, commits):
         print(f"{cfg.rel(out)}:{n}: [notes] 범위 밖 커밋 해시: {h}")
         problems += 1
-    for n, level, msg in numbers.scan_text(text, cfg.check.get("number_allow", [])):
+    # 범위 안 해시는 숫자로 세지 않는다(숫자로만 된 짧은 해시 '8518830' 도 있다)
+    def blank(m):
+        ok = any(c["hash"].startswith(m.group(0)) for c in commits)
+        return " " * len(m.group(0)) if ok else m.group(0)
+    plain = HASH_RE.sub(blank, text)
+    for n, level, msg in numbers.scan_text(plain, cfg.check.get("number_allow", [])):
         if level == "error":
             print(f"{cfg.rel(out)}:{n}: [numbers] {msg}")
             problems += 1

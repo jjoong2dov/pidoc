@@ -3,6 +3,8 @@
 import json
 import subprocess
 
+from pidoc import config, notes
+
 from conftest import make_exe, pidoc
 
 
@@ -49,6 +51,12 @@ def test_notes_check_only(miniproj, capsys):
     assert pidoc("notes", "v0.1..HEAD", "--check", "notes.md") == 0
     notes.write_text(f"# 노트\n\n- 고침 ({shorts[0]})\n- 처음 ({git(miniproj, 'rev-parse', '--short', 'v0.1').strip()})\n")
     assert pidoc("notes", "v0.1..HEAD", "--check", "notes.md") == 1
+
+
+def test_notes_all_digit_hash_is_not_a_number(miniproj):
+    cfg = config.load(miniproj / "docs/pidoc.toml")
+    commits = [{"hash": "8518830" + "a" * 33, "short": "8518830", "subject": "x", "date": ""}]
+    assert notes.report_problems(cfg, miniproj / "n.md", "# 노트\n\n- 고침 (8518830)\n", commits) == 0
 
 
 def test_notes_bad_range(miniproj, capsys):

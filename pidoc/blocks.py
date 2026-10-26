@@ -127,7 +127,8 @@ def fenced(b, content):
     return f"{b.indent}{fence}{b.info}\n{body}{b.indent}{fence}\n"
 
 
-def quote_content(cfg, arg):
+def quote_path(cfg, arg):
+    """(경로 글, 실제 경로, 시작 줄, 끝 줄)."""
     m = QUOTE_RE.match(arg)
     if not m:
         raise BlockError("pidoc-quote 는 경로#La-Lb 꼴이어야 함")
@@ -139,6 +140,11 @@ def quote_content(cfg, arg):
     # 절대 경로·../·밖을 가리키는 심볼릭 링크 모두 resolve 뒤에 걸러진다
     if not path.is_relative_to(root):
         raise BlockError(f"프로젝트 밖 경로는 인용할 수 없음: {rel}")
+    return rel, path, a, b
+
+
+def quote_content(cfg, arg):
+    rel, path, a, b = quote_path(cfg, arg)
     if not path.is_file():
         raise BlockError(f"인용할 파일이 없음: {rel}")
     try:

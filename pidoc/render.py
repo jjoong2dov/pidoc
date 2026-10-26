@@ -4,7 +4,7 @@ import re
 import sys
 from decimal import ROUND_HALF_UP, Decimal
 
-from pidoc import blocks
+from pidoc import blocks, stale
 from pidoc.redact import Redactor
 from pidoc.verify import FactsError, load_all, verify
 
@@ -59,6 +59,8 @@ class Resolver:
         self.facts = facts
         self.red = Redactor.from_config(cfg)
         self.checked = {}
+        self.used = set()   # 이 문서에서 쓴 (대상, 키)
+        self.files = set()  # 이 문서가 인용한 파일(root 기준)
 
     def verified(self, tname, key):
         if (tname, key) not in self.checked:
@@ -88,6 +90,7 @@ class Resolver:
         why = self.verified(tname, key)
         if why:
             raise RenderError(f"사실 {tname}:{key} 가 증거와 맞지 않음 — {why}")
+        self.used.add((tname, key))
         return apply(self.facts[tname][key]["value"], tf.strip() if sep else None)
 
 
@@ -116,6 +119,9 @@ def render_doc(text, res):
             continue
         try:
             out.append(blocks.fenced(part, blocks.content(res.cfg, part)))
+            if part.kind == "quote":
+                path = blocks.quote_path(res.cfg, part.arg)[1]
+                res.files.add(path.relative_to(res.cfg.root.resolve()).as_posix())
         except blocks.BlockError as e:
             errors.append((line, part.label, str(e)))
     return "".join(out), errors
@@ -141,7 +147,7 @@ def render(cfg):
     except FactsError as e:
         print(e, file=sys.stderr)
         return 1
-    results = []
+    results, deps = [], {}
     bad = 0
     for path in src_docs(cfg):
         try:
@@ -150,11 +156,13 @@ def render(cfg):
             print(f"src/{path.name}: {e}", file=sys.stderr)
             bad += 1
             continue
+        res.used, res.files = set(), set()
         out, errors = render_doc(text, res)
         for line, ph, why in errors:
             print(f"src/{path.name}:{line}: {ph} — {why}", file=sys.stderr)
         bad += len(errors)
         results.append((path.name, out))
+        deps[path.name] = stale.doc_deps(cfg, text, res.files, res.used, res.facts)
     if bad:
         print(f"오류 {bad}개 — 결과를 쓰지 않음", file=sys.stderr)
         return 1
@@ -164,5 +172,6 @@ def render(cfg):
         tmp.write_text(out, encoding="utf-8")
         tmp.replace(cfg.out_dir / name)
         print(f"렌더  src/{name} → out/{name}")
+    stale.write_deps(cfg, deps)
     print(f"문서 {len(results)}개 렌더함")
     return 0

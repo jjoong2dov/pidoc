@@ -326,5 +326,6 @@ def test_placeholders_outside_blocks_still_work(repo, cli, capsys):
     src(repo, body)
     assert cli("render") == 0
     assert out(repo) == "첫\n```console pidoc-run=ver\nVersion 1.2.3\n```\n버전 1.2.3\n"
-    assert cli("check") == 0
+    # secrets 는 뺀다: 증거 argv 의 파이썬 경로가 시험 기계의 홈 아래일 수 있다
+    assert cli("check", "--only", "facts", "numbers", "quote", "run") == 0
 

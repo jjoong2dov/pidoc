@@ -1,13 +1,14 @@
-"""pidoc check: 사실·숫자·인용·출력 검사."""
+"""pidoc check: 사실·숫자·인용·출력·내부 정보 검사."""
 
 import sys
 
 from pidoc import blocks
 from pidoc.numbers import scan
 from pidoc.render import RenderError, Resolver, read_doc, render_text, src_docs
+from pidoc.secrets import check_secrets
 from pidoc.verify import FactsError, load_all
 
-CHECKS = ("facts", "numbers", "quote", "run")
+CHECKS = ("facts", "numbers", "quote", "run", "secrets")
 
 
 def _docs(cfg):
@@ -120,6 +121,8 @@ def check(cfg, only=None):
     for kind in ("quote", "run"):
         if kind in only:
             counts[kind] = check_blocks(cfg, docs, kind)
+    if "secrets" in only:
+        counts["secrets"] = check_secrets(cfg)
     bad += sum(counts.values())
     print("검사 " + ", ".join(f"{k} {v}건" for k, v in counts.items()) + f" (문서 {len(docs)}개)")
     return 1 if bad else 0

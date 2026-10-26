@@ -9,6 +9,7 @@ from pidoc.collect import collect
 from pidoc.draft import draft
 from pidoc.facts import build_facts
 from pidoc.render import render
+from pidoc.stale import stale
 
 
 def parser():
@@ -30,7 +31,9 @@ def parser():
     k = sub.add_parser("check", help="문서를 검사한다")
     k.add_argument("--config", default="docs/pidoc.toml", help="설정 파일(기본 docs/pidoc.toml)")
     k.add_argument("--only", nargs="+", choices=CHECKS, metavar="검사",
-                   help="할 검사만(facts, numbers, quote, run). 기본은 전부")
+                   help="할 검사만(facts, numbers, quote, run, secrets). 기본은 전부")
+    s = sub.add_parser("stale", help="render 뒤 원본 파일·사실이 바뀌어 다시 볼 문서를 알린다")
+    s.add_argument("--config", default="docs/pidoc.toml", help="설정 파일(기본 docs/pidoc.toml)")
     return p
 
 
@@ -49,4 +52,6 @@ def main(argv=None):
         return render(cfg)
     if args.cmd == "check":
         return check(cfg, args.only)
+    if args.cmd == "stale":
+        return stale(cfg)
     return build_facts(cfg, args.run)

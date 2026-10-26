@@ -127,6 +127,7 @@ pidoc stale --since HEAD    # git diff 로 (CI 에서 PR 마다)
 | `pidoc check [파일...] [--only 검사...] [--json] [--rerun]` | 문서 시험 |
 | `pidoc stale [--since REV]` | 다시 봐야 할 문서 |
 | `pidoc build [--pdf]` | HTML 한 파일 + 선택 PDF |
+| `pidoc walk <렌더된 문서> --target T [--from N] [--dry-run]` | 따라 하기 문서의 ```` ```sh pidoc-step ```` 블록을 대상에서 차례로 실행, 실패하면 멈추고 종료 3 |
 | `pidoc notes <범위> [--ai ...] [--check 파일]` | git 커밋 → 사실 → 릴리스 노트 초안, 범위 밖 해시 검사 |
 | `pidoc report <junit.xml>` | pytest 결과 → 사실 → 시험 보고서 |
 | `pidoc i18n-check <원본.md> <번역.md>` | 코드·자리표시자·링크·숫자가 같은지 |
@@ -188,6 +189,34 @@ pidoc collect --target pi
 정말 격리가 필요하면 수집 전용 계정(권한 없는 사용자)이나 컨테이너에서 돌리세요.
 - 파이가 없는 독자는 저장소에 들어 있는 증거로 `pidoc replay docs/evidence/runs` 를 돌리면 같은 사실을 얻습니다.
 
+## 따라 하기 문서 시험 (pidoc walk)
+
+튜토리얼은 독자가 그대로 칠 명령이므로, 문서 자체를 대상에서 실행해 봅니다.
+
+````markdown
+```sh pidoc-step
+git clone https://github.com/jjoong2dov/pimon.git
+cd pimon
+```
+
+```sh pidoc-step
+python3 -m pimon check-config --config pimon.toml.example
+```
+````
+
+```sh
+pidoc render
+pidoc walk docs/out/pi-tutorial.md --target pi --dry-run   # 무엇을 실행할지 보기
+pidoc walk docs/out/pi-tutorial.md --target pi             # 실패하면 "N단계 실패" + 마지막 출력, 종료 3
+pidoc walk docs/out/pi-tutorial.md --target pi --from 3    # 고친 뒤 이어서
+```
+
+- 블록 하나가 한 단계이고 `bash -e -o pipefail -c '<블록>'` 으로 돕니다(ssh 대상은 collect 와 같은 ssh 옵션).
+- **이 기능은 셸을 쓰고 `allow_programs` 를 적용하지 않습니다.** 문서에 적힌 명령이 곧 시험 대상이기 때문입니다.
+  믿을 수 있는 문서만, 시험용 장비·계정에서 돌리세요.
+- 단계 사이에 작업 폴더(`cd`)는 이어지고, 환경변수(`export`)는 이어지지 않습니다.
+- 기록은 `docs/evidence/walks/<id>/`(단계마다 스크립트·stdout·stderr·종료 코드·시간, 가리기 적용). 단계 시간 제한은 `[walk] timeout_s`(기본 600초).
+
 ## AI 초안
 
 ```sh
@@ -222,7 +251,8 @@ pidoc draft 틀.md --out docs/src/usage.md --ai none      # 부르지 않고 프
 | `ch10` | check links·terms·secrets, stale |
 | `ch11` | build(HTML·PDF) |
 | `ch12` | notes·report·i18n-check |
-| `v0.1` | pimon 견본(examples/pimon)·README. 13장(파이 실기)의 출발점 |
+| `v0.1` | pimon 견본(examples/pimon)·README |
+| `v0.2-review1` | Codex 코드 리뷰 1차 반영([REVIEW1.md](REVIEW1.md)) + `pidoc walk`. 13장(파이 실기)의 출발점 |
 
 설계와 달라진 점은 [DESIGN_CHANGES.md](DESIGN_CHANGES.md), 작업 규칙은 [CLAUDE.md](CLAUDE.md).
 

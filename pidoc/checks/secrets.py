@@ -67,7 +67,7 @@ def files_to_scan(ctx):
     cfg = ctx.cfg
     files = [d.path for d in ctx.docs]
     if ctx.all_files:
-        for folder in (cfg.out_dir, cfg.facts_dir, cfg.runs_dir, cfg.ai_dir):
+        for folder in (cfg.out_dir, cfg.facts_dir, cfg.runs_dir, cfg.docs_dir / "evidence" / "walks", cfg.ai_dir):
             if folder.is_dir():
                 files += sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix in TEXT_SUFFIXES)
     else:

@@ -94,3 +94,30 @@
   온도·링크는 가짜 파이 값이라 그대로 비교한다.
 - 견본 설정의 ssh 대상 `pi` 는 13장(파이 실기)용이다. PC 만으로 따라 할 때는 `--target pc`.
 - 단계 10(예제·README)은 `v0.1` 태그로 남겼다(설계의 장별 태그 계획에 없던 단계).
+
+## 리뷰 1차 반영(v0.2-review1, 자세한 것은 REVIEW1.md)
+- 사실은 쓰기 전에 증거와 다시 맞춘다(`verify.py`): run 의 stdout sha256, 같은 규칙으로 다시 뽑은 값·타입,
+  그 명령의 더 최근 수집 결과. 코드 사실은 원본 파일 sha256. git·test 사실은 원본을 남기지 않으므로 맞춰 보지 않는다.
+- 파일 경로(pidoc-quote, pidoc-deps, stale_deps, extract, 로컬 cwd, draft·notes·report 의 --out)는 대상 저장소 안으로 가둔다.
+- 본문 사실은 Markdown 특수 문자를 이스케이프하고 `|raw` 를 더했다. `|code` 는 값보다 긴 백틱, pidoc-run/quote 블록은 본문보다 긴 펜스.
+  여러 줄 사실은 본문에 넣을 수 없다. PDF 는 data: 와 저장소 안 file: 만 가져온다.
+- 잘린 출력·UTF-8 이 아닌 출력·추출 일부 실패는 그 명령 전체의 실패다(사실을 하나도 갱신하지 않음). 잘린 출력은 마지막 줄바꿈까지만 저장.
+- .deps.json 의 `facts` 는 `{대상:키: 사실 해시}`, `runs` 는 `{대상:명령: {run, stdout_sha256}}` 로 바꿨다(stale 이 사실·run 변경을 본다).
+- 숫자 검사가 코드(펜스·인라인)도 본다. 등급은 `check.code_numbers`(기본 warn), 근거 표시는 펜스 `pidoc-ok=이유`.
+  점이 있는 수(Python3.12)는 영문에 붙어 있어도 센다. 번호 목록은 두 자리까지, 표 첫 열은 1(또는 0)부터 1씩 늘 때만 순번.
+- 렌더 실패 문서는 이전 결과와 의존 기록을 지운다. build 가 실패하면 이전 site.html·pdf 도 지운다.
+- AI: `[ai] facts` 로 보낼 사실을 고르고, 보내기 전에 secrets 규칙으로 프롬프트를 검사한다. docs/ai/ 는 기본 gitignore.
+- allow_programs 는 "보안 경계가 아니라 실수 방지 목록"으로 문서화하고, 셸·실행기 등록 금지, 인라인 코드(-c/-e) 거절, argv 제어 문자 금지.
+- secrets 에 IPv6·MAC·개인키·Bearer·API 토큰 모양·URL 비밀번호·홈 폴더(`home_allow`, 기본 pi)를 더했다. 휴리스틱임을 README 에 적었다.
+  argv 의 `--token 값`·`--password=값` 은 증거에 `<가림>`.
+- `pidoc init` 은 이미 있는 docs/.gitignore 에 빠진 줄만 더한다. `--keep-raw` 는 원본 폴더가 무시되지 않으면 경고.
+- 사실 파일을 읽을 때 형식을 검사한다(필수 필드, type 과 값, 유한한 float, 오프셋 있는 시각).
+- extract cli 는 ArgumentParser 를 받은 변수(와 그 add_subparsers·add_parser)의 호출만, http 는 self.path 에서 나온 값과의 비교만 본다.
+
+## walk(13장용, 새 기능)
+- 블록 하나 = 한 단계, `bash -e -o pipefail -c`. 설계 메모와 다른 점: 독자의 셸처럼 **작업 폴더를 단계 사이에 잇는다**
+  (스크립트 앞에 `cd -- <앞 단계가 끝난 폴더>`, 끝에 `$PWD` 를 stderr 로 알리고 기록 전에 떼어 냄).
+  `git clone …; cd pimon` 다음 단계가 pimon 폴더에서 돌아야 따라 하기 문서를 그대로 시험할 수 있어서다. 환경변수는 잇지 않는다.
+- 로컬 대상은 저장소 루트(또는 대상 cwd)에서, ssh 대상은 원격 홈(또는 대상 cwd)에서 시작한다.
+- 펜스 언어는 sh 외에 bash·console 도 받는다(정보 문자열에 pidoc-step 이 있을 때만).
+- 출력이 잘려도 walk 에서는 실패로 보지 않는다(사실을 만들지 않으므로). 잘린 줄은 남기지 않는다.

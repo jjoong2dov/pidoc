@@ -93,6 +93,12 @@ def cmd_i18n(args):
     return i18n_check(args.original, args.translation)
 
 
+def cmd_walk(args):
+    from .walk import walk
+    cfg = load_config(args)
+    return walk(cfg, args.doc, args.target, args.start, args.dry_run)
+
+
 def cmd_facts(args):
     cfg = load_config(args)
     every = facts.load_all(cfg.facts_dir)
@@ -190,6 +196,17 @@ def parser():
     s.add_argument("original")
     s.add_argument("translation")
     s.set_defaults(func=cmd_i18n)
+
+    s = sub.add_parser(
+        "walk", help="따라 하기 문서의 ```sh pidoc-step 블록을 대상에서 차례로 실행",
+        description="렌더된 문서의 ```sh pidoc-step 블록을 차례로 대상에서 bash -e -o pipefail -c 로 실행한다. "
+                    "따라 하기 문서 자체를 시험하는 기능이라 셸을 쓰고 collect.allow_programs 를 적용하지 않는다 "
+                    "— 믿을 수 있는 문서만, 시험용 장비에서 돌릴 것. 기록은 docs/evidence/walks/. 실패하면 종료 3.")
+    s.add_argument("doc", help="렌더된 문서 (예: docs/out/pi-tutorial.md)")
+    s.add_argument("--target", required=True, help="실행할 대상")
+    s.add_argument("--from", dest="start", type=int, default=1, metavar="N", help="N단계부터 (앞 단계는 건너뜀)")
+    s.add_argument("--dry-run", action="store_true", help="실행하지 않고 단계만 보여 주기")
+    s.set_defaults(func=cmd_walk)
 
     s = sub.add_parser("facts", help="사실 목록 보기")
     s.add_argument("--target", help="이 대상만")

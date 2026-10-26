@@ -132,3 +132,9 @@ def test_stale_since_git(miniproj, capsys):
     assert "docs/src/web.md: minimon/web.py 바뀜(HEAD 이후)" in out
     assert "other.md" not in out
     assert pidoc("stale", "--since", "no-such-rev") == 2
+
+
+def test_secrets_scans_junit_xml_in_out(tmp_path, monkeypatch):
+    """pytest --junitxml 결과의 hostname 속성(이 PC 이름)을 놓쳤다(12장) → .xml 도 본다."""
+    from pidoc.checks.secrets import TEXT_SUFFIXES
+    assert ".xml" in TEXT_SUFFIXES

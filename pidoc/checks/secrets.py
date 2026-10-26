@@ -19,7 +19,8 @@ EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)")
 SAFE_NETS = [ipaddress.ip_network(n) for n in
              ("192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24", "127.0.0.0/8", "0.0.0.0/32")]
 SAFE_DOMAINS = ("example.com", "example.org", "example.net", "users.noreply.github.com")
-TEXT_SUFFIXES = (".md", ".html", ".json", ".stdout", ".stderr", ".txt", ".sha256")
+# .xml: pytest 의 junit.xml 에는 hostname 속성으로 이 PC 의 이름이 들어간다(12장에서 놓친 것)
+TEXT_SUFFIXES = (".md", ".html", ".json", ".stdout", ".stderr", ".txt", ".sha256", ".xml", ".csv", ".log", ".yaml", ".yml", ".toml", ".sh")
 IPV6_RE = re.compile(r"(?<![\w:.])(?:[0-9A-Fa-f]{0,4}:){2,7}[0-9A-Fa-f]{0,4}(?![\w:])")
 SAFE_V6 = [ipaddress.ip_network(n) for n in ("2001:db8::/32", "::1/128", "::/128")]
 MAC_RE = re.compile(r"(?<![\w:])(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}(?![\w:])")

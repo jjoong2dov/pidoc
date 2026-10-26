@@ -77,3 +77,14 @@
 - 한 파일에 여러 문서를 넣으므로 제목 id 를 `<문서>--<제목 앵커>` 로 하고, 문서 사이 링크(`b.md#x`)를 `#b--x` 로 바꾼다.
   markdown-it 이 링크 주소의 한글을 %인코딩하므로 되돌린 뒤 바꾼다.
 - `--pdf` 는 WeasyPrint 가 없으면 **렌더 전에** 멈춘다(반만 만든 결과가 남지 않게). 렌더가 실패하면 HTML 도 만들지 않는다.
+
+## notes·report·i18n
+- notes: 사실은 `git.range`·`git.count`·`git.commits`("짧은해시 제목" 목록)·`git.hashes`. 범위가 바뀌면 git.json 을 통째로 바꾼다.
+  `--check 파일` 로 AI 없이 해시 검사만 할 수 있다. 숫자가 하나도 없는 16진 낱말(facade 등)은 해시로 보지 않는다.
+  초안에는 숫자 검사도 한다.
+- 숫자 검사에 예외 하나 더: **커밋 해시처럼 보이는 7~40자 16진 낱말**(a-f 글자와 숫자가 섞인 것).
+  notes 시험에서 맞는 해시 `851883f` 의 앞 숫자가 '근거 없는 숫자'로 걸린 실제 오탐. 해시가 맞는지는 notes 가 본다.
+- report: 사실은 `test.{tests,passed,failures,errors,skipped,time,failed_cases,source}`. 틀은 render 와 같은 문법,
+  기본 결과는 docs/out/test-report.md. 빈 목록의 `|join`(과 표시)은 "(없음)".
+- i18n-check: 코드 블록(언어·본문), 인라인 코드, `{{...}}`, 링크 주소, 본문 숫자를 비교한다.
+  한국어 '3장'이 숫자 검사에서 빠지므로 영어 쪽 'Chapter 3'·'Section 2.1' 도 뺀다. 설정 파일 없이 돈다.

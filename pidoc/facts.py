@@ -175,7 +175,7 @@ def make_fact(rule, value, *, run, command, source_sha256, collected_at):
 
 def show_value(value):
     if isinstance(value, list):
-        return ", ".join(str(v) for v in value)
+        return ", ".join(str(v) for v in value) if value else "(없음)"
     if isinstance(value, bool):
         return "true" if value else "false"
     return str(value)

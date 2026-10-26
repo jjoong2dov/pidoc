@@ -37,7 +37,7 @@ def apply_transforms(value, transforms):
         elif t == "join":
             if not isinstance(value, list):
                 raise RenderError(f"|join 은 목록 사실에만 쓸 수 있습니다(지금 {facts.type_of(value)})")
-            value = ", ".join(str(v) for v in value)
+            value = ", ".join(str(v) for v in value) if value else "(없음)"
         elif t == "code":
             code = True
         else:

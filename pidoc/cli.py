@@ -76,6 +76,23 @@ def cmd_build(args):
     return build(cfg, args.pdf)
 
 
+def cmd_notes(args):
+    from .notes import notes
+    cfg = load_config(args)
+    return notes(cfg, args.range, args.template, args.out, args.ai, args.check)
+
+
+def cmd_report(args):
+    from .report import report
+    cfg = load_config(args)
+    return report(cfg, args.junit, args.template, args.out)
+
+
+def cmd_i18n(args):
+    from .i18n import i18n_check
+    return i18n_check(args.original, args.translation)
+
+
 def cmd_facts(args):
     cfg = load_config(args)
     every = facts.load_all(cfg.facts_dir)
@@ -151,6 +168,25 @@ def parser():
     s = sub.add_parser("build", help="render 후 HTML 한 파일(+ 선택 PDF)")
     s.add_argument("--pdf", action="store_true", help="PDF 도 만들기 (WeasyPrint 필요)")
     s.set_defaults(func=cmd_build)
+
+    s = sub.add_parser("notes", help="git 커밋 → 사실 → 릴리스 노트 초안(해시 검사)")
+    s.add_argument("range", help="git 범위 (예: v0.2..v0.3)")
+    s.add_argument("--template", help="틀 Markdown (기본: 내장 틀)")
+    s.add_argument("--out", help="초안 쓸 곳 (기본: docs/src/release-notes.md)")
+    s.add_argument("--ai", choices=["claude", "codex", "none"], help="부를 AI")
+    s.add_argument("--check", metavar="파일", help="AI 를 부르지 않고 이 파일의 커밋 해시만 검사")
+    s.set_defaults(func=cmd_notes)
+
+    s = sub.add_parser("report", help="pytest JUnit XML → 사실 → 시험 보고서")
+    s.add_argument("junit", help="pytest --junitxml 로 만든 파일")
+    s.add_argument("--template", help="틀 Markdown (기본: 내장 틀)")
+    s.add_argument("--out", help="보고서 쓸 곳 (기본: docs/out/test-report.md)")
+    s.set_defaults(func=cmd_report)
+
+    s = sub.add_parser("i18n-check", help="원본과 번역본의 코드·자리표시자·링크·숫자 비교")
+    s.add_argument("original")
+    s.add_argument("translation")
+    s.set_defaults(func=cmd_i18n)
 
     s = sub.add_parser("facts", help="사실 목록 보기")
     s.add_argument("--target", help="이 대상만")

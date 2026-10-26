@@ -3,6 +3,7 @@
 숫자는 {{fact:키}} 로 넣는 것이 원칙이다. 다음은 문서 구조나 이름의 일부라서 세지 않는다.
   - 펜스 코드 블록, 인라인 코드(`...`), {{fact:...}}, HTML 주석, 링크 주소
   - 제목 앞 번호(## 3. 설치, ## 2장), 번호 목록 표시(1. 2.), 표 첫 열의 순번
+  - 커밋 해시처럼 보이는 7~40자 16진 낱말(851883f) — 해시가 맞는지는 notes 가 따로 본다
   - 본문의 장·절 참조(3장, 2.1절) — '종이 3장'도 넘어가는 미탐은 감수한다
   - 영문 낱말에 붙은 숫자(IPv4, x86_64, H2) 와 `UTF-8`·`SHA-256` 처럼 '글자-숫자'
   - 설정 check.number_allow 의 구절("Python 3", "HTTP 200" ...)
@@ -27,6 +28,7 @@ AUTOLINK_RE = re.compile(r"<(?:https?|mailto):[^>]*>")
 INLINE_CODE_RE = re.compile(r"(`+)(.+?)\1")
 FACT_RE = re.compile(r"\{\{fact:[^{}]*\}\}")
 COMMENT_RE = re.compile(r"<!--.*?-->")
+HASH_RE = re.compile(r"(?<![0-9A-Za-z])(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{7,40}(?![0-9A-Za-z])")
 CHAPTER_RE = re.compile(r"\d+(?:\.\d+)*(?=장|절)")
 
 KOREAN_NUM_RE = re.compile(
@@ -42,7 +44,7 @@ def _blank(text, pattern):
 
 def strip_structure(line, allow):
     """세지 않을 부분을 지운 줄."""
-    for pattern in (COMMENT_RE, FACT_RE, INLINE_CODE_RE, AUTOLINK_RE, CHAPTER_RE):
+    for pattern in (COMMENT_RE, FACT_RE, INLINE_CODE_RE, AUTOLINK_RE, CHAPTER_RE, HASH_RE):
         line = _blank(line, pattern)
     line = LINK_TARGET_RE.sub(lambda m: "]" + " " * (len(m.group(0)) - 1), line)
     m = HEADING_NUM_RE.match(line)

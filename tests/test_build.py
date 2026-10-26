@@ -63,3 +63,12 @@ def test_build_pdf(miniproj):
     docs(miniproj)
     assert pidoc("build", "--pdf") == 0
     assert (miniproj / "docs/out/site.pdf").read_bytes().startswith(b"%PDF")
+
+
+def test_link_from_subfolder_doc_is_resolved():
+    """en/quickstart.md 의 ../reference.md#x 는 reference 문서 안 앵커로(Codex 최종 검토 지적)."""
+    import pytest
+    pytest.importorskip("markdown_it")
+    from pidoc.build import _markdown, to_html
+    out = to_html(_markdown(), "[참조](../reference.md#x)\n", "en-quickstart", {"reference", "en-quickstart"}, "en/quickstart.md")
+    assert 'href="#reference--x"' in out

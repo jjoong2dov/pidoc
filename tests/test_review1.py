@@ -367,3 +367,17 @@ def test_r03_pdf_fetcher_blocks_outside(miniproj):
         with pytest.raises(ValueError):
             fetch(url)
     fetch((miniproj / "minimon/web.py").as_uri())          # 저장소 안은 된다
+
+
+def test_final_code_fact_value_hand_edit_is_rejected(miniproj, capsys):
+    """Codex 최종 사실 검토: 원본 해시만 봐서 code.json 의 값만 고친 것은 통과했다 → 다시 뽑아 대조."""
+    pidoc("extract", "config")
+    write_doc(miniproj, "# x\n\n{{fact:code:config.limit.default}}\n")
+    assert pidoc("check", "--only", "facts") == 0
+    path = miniproj / "docs/facts/code.json"
+    data = json.loads(path.read_text())
+    data["facts"]["config.limit.default"]["value"] = 50
+    path.write_text(json.dumps(data))
+    capsys.readouterr()
+    assert pidoc("check", "--only", "facts") == 1
+    assert "코드에서 다시 뽑은 값과 다릅니다" in capsys.readouterr().out

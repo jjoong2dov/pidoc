@@ -3,7 +3,8 @@
 사실 파일은 손으로 고칠 수 있는 JSON 이다. 그래서 값만 믿지 않고:
   - 수집한 사실: 그 run 의 stdout sha256 이 맞는지, 같은 규칙으로 다시 뽑은 값이 같은지,
     그 명령의 더 최근 수집이 실패하거나 이 사실을 만들지 않았는지
-  - 코드에서 뽑은 사실(code): 원본 파일의 sha256 이 그대로인지
+  - 코드에서 뽑은 사실(code): 원본 파일의 sha256 이 그대로인지, 같은 추출기로 다시 뽑은 값·타입이 같은지
+    (Codex 최종 검토: 원본 해시만 보면 code.json 의 값만 고친 것을 못 잡았다)
 git·test 사실은 pidoc 이 git log·JUnit 파일에서 바로 만들고 원본을 남기지 않으므로 다시 맞춰 보지 않는다.
 """
 
@@ -34,7 +35,7 @@ class Verifier:
         if target in UNCHECKED_TARGETS:
             return None
         if target == "code":
-            return self._check_code(fact)
+            return self._check_code(dict(fact, _key=key))
         return self._check_collected(target, key, fact)
 
     def _check_code(self, fact):
@@ -45,7 +46,24 @@ class Verifier:
         path = self.cfg.root / source
         if not path.is_file() or sha256_file(path) != fact.get("source_sha256"):
             return f"코드가 바뀌었습니다({source}) — pidoc extract {kind} 를 다시 돌리세요"
+        again = self._extracted(kind).get(fact.get("_key"))
+        if again is None:
+            return f"다시 뽑으니 이 사실이 없습니다 — pidoc extract {kind} 를 다시 돌리세요"
+        if again.get("value") != fact.get("value") or again.get("type") != fact.get("type"):
+            return f"코드에서 다시 뽑은 값과 다릅니다({again.get('value')!r}) — 사실 파일을 손으로 고쳤나요? pidoc extract {kind}"
         return None
+
+    def _extracted(self, kind):
+        """그 종류를 지금 코드에서 다시 뽑은 사실(파일에 쓰지 않음)."""
+        key = f"extract:{kind}"
+        if key not in self.cache:
+            from .extract import RUNNERS, Collector
+            if kind not in RUNNERS:
+                raise PidocError(f"모르는 추출 종류: {kind}")
+            out = Collector(self.cfg, kind)
+            RUNNERS[kind](self.cfg, out)
+            self.cache[key] = out.items
+        return self.cache[key]
 
     def _check_collected(self, target, key, fact):
         cfg = self.cfg

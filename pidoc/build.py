@@ -6,6 +6,7 @@ HTML 은 markdown-it-py(MIT), PDF 는 WeasyPrint(BSD) 가 있어야 한다. 없�
 
 import sys
 import html
+import posixpath
 import re
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote
@@ -51,7 +52,7 @@ def doc_title(text, fallback):
     return fallback
 
 
-def to_html(md, text, stem, stems):
+def to_html(md, text, stem, stems, rel="."):
     """문서 하나를 HTML 로. 제목에 id 를 달고 문서 사이 링크를 한 파일 안 앵커로 바꾼다."""
     tokens = md.parse(text)
     seen = {}
@@ -71,7 +72,9 @@ def to_html(md, text, stem, stems):
             if not path:
                 child.attrSet("href", f"#{stem}--{anchor}")
             elif path.endswith(".md"):
-                other = _stem(path)
+                # 링크는 이 문서 위치 기준이다: en/quickstart.md 의 ../reference.md → reference.md
+                # (Codex 사실 검토: 하위 폴더 문서의 링크가 변환되지 않았다)
+                other = _stem(posixpath.normpath(posixpath.join(posixpath.dirname(rel), path)))
                 if other in stems:
                     child.attrSet("href", f"#{other}--{anchor}" if anchor else f"#doc-{other}")
     return md.renderer.render(tokens, md.options, {})
@@ -90,7 +93,7 @@ def build_html(cfg, outs):
     for stem, text, rel in items:
         name = doc_title(text, rel)
         toc.append(f'<li><a href="#doc-{stem}">{html.escape(name)}</a></li>')
-        sections.append(f'<section id="doc-{stem}">\n{to_html(md, text, stem, stems)}</section>')
+        sections.append(f'<section id="doc-{stem}">\n{to_html(md, text, stem, stems, rel)}</section>')
     page = (
         "<!doctype html>\n<html lang=\"ko\">\n<head>\n<meta charset=\"utf-8\">\n"
         f"<title>{html.escape(title)}</title>\n<style>\n{CSS}</style>\n</head>\n<body>\n"

@@ -33,7 +33,7 @@ targets = ["pi"]
 
 [[command]]
 id = "tricky"
-argv = ["python3", "-c", "print('a; b' + \\"$HOME\\")"]
+argv = ["uname", "a; b", "$HOME", "it's"]
 targets = ["pi"]
 
 [[command]]
@@ -82,7 +82,7 @@ def test_ssh_quotes_arguments(repo, bindir, monkeypatch, tmp_path):
     log = setup(repo, bindir, monkeypatch, tmp_path)
     pidoc("collect", "--target", "pi", "--only", "tricky")
     line = ssh_calls(log)[-1]
-    assert line.endswith("python3 -c 'print('\"'\"'a; b'\"'\"' + \"$HOME\")'")
+    assert line.endswith("uname 'a; b' '$HOME' 'it'\"'\"'s'")
 
 
 def test_ssh_not_allowed_program_never_runs(repo, bindir, monkeypatch, tmp_path):

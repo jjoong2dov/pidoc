@@ -45,8 +45,8 @@ def test_render_fills_everything(miniproj):
     deps = json.loads((miniproj / "docs/out/.deps.json").read_text())
     info = deps["docs/src/use.md"]
     assert set(info["deps"]) == {"minimon/__main__.py", "minimon/settings.py"}
-    assert info["facts"] == ["code:config.limit.default", "pc:minimon.commands", "pc:minimon.scan_path"]
-    assert info["runs"] == ["20261026T231500-pc"] and info["out"] == "docs/out/use.md"
+    assert sorted(info["facts"]) == ["code:config.limit.default", "pc:minimon.commands", "pc:minimon.scan_path"]
+    assert info["runs"]["pc:scan"]["run"] == "20261026T231500-pc" and info["out"] == "docs/out/use.md"
 
 
 def test_render_errors_do_not_write(miniproj, capsys):

@@ -1,8 +1,9 @@
-"""secrets: 공개하면 안 되는 값 — IP 주소, 이메일, 실제 hostname, 금지어(docs/banned.txt).
+"""secrets: 공개하면 안 되는 값 찾기(휴리스틱 — 모든 비밀을 찾지는 못한다).
 
-원본(docs/src)뿐 아니라 렌더 결과(docs/out), 사실(docs/facts), 증거(docs/evidence/runs)도 본다.
-저장소에 함께 공개되는 것들이기 때문이다. 펜스 코드 안도 본다.
-문서용 주소(192.0.2.x, 198.51.100.x, 203.0.113.x)·루프백·0.0.0.0 과 example.com 계열은 넘긴다.
+찾는 것: IPv4·IPv6 주소, MAC 주소, 이메일, 실제 hostname, 금지어(docs/banned.txt),
+개인키(PEM), Bearer 토큰, 흔한 API 토큰 모양(ghp_·github_pat_·xox?-·sk-·AKIA), URL 안 사용자:비밀번호, 홈 폴더 경로.
+원본(docs/src)뿐 아니라 렌더 결과(docs/out), 사실(docs/facts), 증거(docs/evidence/runs), AI 기록(docs/ai)도 본다.
+펜스 코드 안도 본다. 문서용 주소(192.0.2.x 등, 2001:db8::/32)·루프백, example.com 계열은 넘긴다.
 메시지에는 찾은 값을 앞 두 글자만 보여 준다(CI 기록에 다시 새지 않게).
 """
 
@@ -18,7 +19,19 @@ EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)")
 SAFE_NETS = [ipaddress.ip_network(n) for n in
              ("192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24", "127.0.0.0/8", "0.0.0.0/32")]
 SAFE_DOMAINS = ("example.com", "example.org", "example.net", "users.noreply.github.com")
-TEXT_SUFFIXES = (".md", ".html", ".json", ".stdout", ".stderr", ".txt")
+TEXT_SUFFIXES = (".md", ".html", ".json", ".stdout", ".stderr", ".txt", ".sha256")
+IPV6_RE = re.compile(r"(?<![\w:.])(?:[0-9A-Fa-f]{0,4}:){2,7}[0-9A-Fa-f]{0,4}(?![\w:])")
+SAFE_V6 = [ipaddress.ip_network(n) for n in ("2001:db8::/32", "::1/128", "::/128")]
+MAC_RE = re.compile(r"(?<![\w:])(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}(?![\w:])")
+SAFE_MAC_RE = re.compile(r"^(00:00:00:00:00:00|ff:ff:ff:ff:ff:ff|00:00:5e:00:53:[0-9a-f]{2})$", re.IGNORECASE)
+PATTERNS = [
+    (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"), "개인키"),
+    (re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{8,}"), "Bearer 토큰"),
+    (re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_\w{20,}|xox[abposr]-[\w-]{10,}|sk-[A-Za-z0-9_-]{20,}"
+                r"|AKIA[0-9A-Z]{16})"), "API 토큰 모양"),
+    (re.compile(r"\b[a-zA-Z][a-zA-Z0-9+.-]*://[^/\s:@]+:[^/\s@]+@"), "URL 안 사용자:비밀번호"),
+]
+HOME_RE = re.compile(r"(?:/home|/Users)/([A-Za-z0-9_.-]+)")
 
 
 def hide(value):
@@ -54,7 +67,7 @@ def files_to_scan(ctx):
     cfg = ctx.cfg
     files = [d.path for d in ctx.docs]
     if ctx.all_files:
-        for folder in (cfg.out_dir, cfg.facts_dir, cfg.runs_dir):
+        for folder in (cfg.out_dir, cfg.facts_dir, cfg.runs_dir, cfg.ai_dir):
             if folder.is_dir():
                 files += sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix in TEXT_SUFFIXES)
     else:
@@ -62,32 +75,65 @@ def files_to_scan(ctx):
     return files
 
 
-def run(ctx):
-    cfg = ctx.cfg
-    settings = cfg.check
-    ip_allow = settings.get("ip_allow", [])
-    email_allow = settings.get("email_allow", [])
-    names = set()
-    for target in cfg.targets.values():
-        names.update(redact.real_names(cfg, target))
-    hosts = [(n, redact.name_pattern(n)) for n in sorted(names)]
-    banned = load_banned(cfg.docs_dir / settings.get("banned", "banned.txt"))
-    findings = []
-    for path in files_to_scan(ctx):
-        name = cfg.rel(path)
-        text = path.read_text(encoding="utf-8", errors="replace")
+def _ipv6_ok(text):
+    try:
+        ip = ipaddress.IPv6Address(text)
+    except ValueError:
+        return True                      # 시각(23:15:02)·C++ 이름 같은 것
+    return any(ip in net for net in SAFE_V6)
+
+
+class Scanner:
+    """설정에 맞춘 비밀 찾기. scan(글) → [(줄 번호, 메시지)]"""
+
+    def __init__(self, cfg):
+        settings = cfg.check
+        self.ip_allow = settings.get("ip_allow", [])
+        self.email_allow = settings.get("email_allow", [])
+        self.home_allow = set(settings.get("home_allow", ["pi"]))
+        names = set()
+        for target in cfg.targets.values():
+            names.update(redact.real_names(cfg, target))
+        self.hosts = [(n, redact.name_pattern(n)) for n in sorted(names)]
+        self.banned = load_banned(cfg.docs_dir / settings.get("banned", "banned.txt"))
+
+    def scan(self, text):
+        found = []
         for n, line in enumerate(text.splitlines(), 1):
             for m in IP_RE.finditer(line):
-                if not _ip_ok(m.group(0), ip_allow):
-                    findings.append(Finding(name, n, "secrets", f"IP 주소 {hide(m.group(0))} — 문서용 주소(192.0.2.x)나 <ip> 로"))
+                if not _ip_ok(m.group(0), self.ip_allow):
+                    found.append((n, f"IP 주소 {hide(m.group(0))} — 문서용 주소(192.0.2.x)나 <ip> 로"))
+            for m in IPV6_RE.finditer(line):
+                if not _ipv6_ok(m.group(0)):
+                    found.append((n, f"IPv6 주소 {hide(m.group(0))} — 문서용 주소(2001:db8::)로"))
+            for m in MAC_RE.finditer(line):
+                if not SAFE_MAC_RE.match(m.group(0)):
+                    found.append((n, f"MAC 주소 {hide(m.group(0))}"))
             for m in EMAIL_RE.finditer(line):
-                if not _email_ok(m.group(1), email_allow):
-                    findings.append(Finding(name, n, "secrets", f"이메일 {hide(m.group(0))} — example.com 주소로"))
-            for host, pattern in hosts:
+                if not _email_ok(m.group(1), self.email_allow):
+                    found.append((n, f"이메일 {hide(m.group(0))} — example.com 주소로"))
+            for pattern, what in PATTERNS:
+                m = pattern.search(line)
+                if m:
+                    found.append((n, f"{what} {hide(m.group(0))}"))
+            for m in HOME_RE.finditer(line):
+                if m.group(1) not in self.home_allow:
+                    found.append((n, f"홈 폴더 경로 {hide(m.group(0))} — ~/ 나 /home/pi 처럼 일반적인 경로로"))
+            for host, pattern in self.hosts:
                 if pattern.search(line):
-                    findings.append(Finding(name, n, "secrets", f"실제 hostname {hide(host)} — 대상 alias 로"))
+                    found.append((n, f"실제 hostname {hide(host)} — 대상 alias 로"))
             lower = line.lower()
-            for word in banned:
+            for word in self.banned:
                 if word.lower() in lower:
-                    findings.append(Finding(name, n, "secrets", f"금지어 {hide(word)} (banned.txt)"))
+                    found.append((n, f"금지어 {hide(word)} (banned.txt)"))
+        return found
+
+
+def run(ctx):
+    scanner = Scanner(ctx.cfg)
+    findings = []
+    for path in files_to_scan(ctx):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for n, msg in scanner.scan(text):
+            findings.append(Finding(ctx.cfg.rel(path), n, "secrets", msg))
     return findings

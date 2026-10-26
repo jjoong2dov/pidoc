@@ -105,35 +105,69 @@ def parse(path):
 
 # --- cli ---
 
+def _receiver(call):
+    """a.b(...) 의 a 이름(없으면 None)."""
+    func = call.func
+    if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+        return func.value.id
+    return None
+
+
+def _assigned_calls(tree):
+    """'이름 = 호출(...)' 들: [(이름, 호출)]"""
+    found = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) and len(node.targets) == 1 \
+                and isinstance(node.targets[0], ast.Name):
+            found.append((node.targets[0].id, node.value))
+    return found
+
+
 def extract_cli(cfg, out):
+    """ArgumentParser 를 받은 변수와, 그 변수의 add_argument·add_subparsers·add_parser 만 따라간다."""
     for path in python_files(cfg):
         tree = parse(path)
-        calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)]
-        parsers = [c for c in calls if _call_name(c) == "ArgumentParser"]
+        assigned = _assigned_calls(tree)
+        parsers = {name: call for name, call in assigned if _call_name(call) == "ArgumentParser"}
         if not parsers:
             continue
-        kw = {k.arg: _const(k.value) for k in parsers[0].keywords if k.arg}
+        subs = {name for name, call in assigned if _call_name(call) == "add_subparsers" and _receiver(call) in parsers}
+        sub_parsers = {}
+        for name, call in assigned:
+            if _call_name(call) == "add_parser" and _receiver(call) in subs and call.args:
+                sub_parsers[name] = _const(call.args[0])
+        first = next(iter(parsers.values()))
+        kw = {k.arg: _const(k.value) for k in first.keywords if k.arg}
         prog = _part(kw.get("prog") or module_name(cfg, path).split(".")[0])
         base = f"cli.{prog}"
         out.add(f"{base}.description", kw.get("description"), path, "ast")
         options, commands = [], []
+        calls = sorted((n for n in ast.walk(tree) if isinstance(n, ast.Call)), key=lambda c: (c.lineno, c.col_offset))
         for call in calls:
             name = _call_name(call)
+            owner = _receiver(call)
             args = [_const(a) for a in call.args]
             kws = {k.arg: _const(k.value) for k in call.keywords if k.arg}
-            if name == "add_parser" and args and isinstance(args[0], str):
+            if name == "add_parser" and owner in subs and args and isinstance(args[0], str):
                 commands.append(args[0])
                 out.add(f"{base}.command.{_part(args[0])}.help", kws.get("help"), path, "ast")
             if name != "add_argument" or not args or not all(isinstance(a, str) for a in args):
                 continue
+            if owner in parsers:
+                where = base
+            elif owner in sub_parsers and isinstance(sub_parsers[owner], str):
+                where = f"{base}.command.{_part(sub_parsers[owner])}"
+            else:
+                continue                       # 다른 객체의 add_argument 는 CLI 가 아니다
             flags = [a for a in args if a.startswith("-")]
             if not flags:                      # 위치 인자: choices 가 있으면 하위 명령으로 본다
-                if isinstance(kws.get("choices"), (list, tuple)):
+                if where == base and isinstance(kws.get("choices"), (list, tuple)):
                     commands += list(kws["choices"])
                 continue
             long = max(flags, key=len)
-            options.append(long)
-            opt = f"{base}.option.{_part(long.lstrip('-'))}"
+            if where == base:
+                options.append(long)
+            opt = f"{where}.option.{_part(long.lstrip('-'))}"
             out.add(f"{opt}.help", kws.get("help"), path, "ast")
             default = kws.get("default")
             if isinstance(default, (str, int, float, bool)):
@@ -216,12 +250,41 @@ def extract_config(cfg, out):
 
 # --- http ---
 
+def _is_self_path(node):
+    return isinstance(node, ast.Attribute) and node.attr == "path" and \
+        isinstance(node.value, ast.Name) and node.value.id == "self"
+
+
+def _path_names(func):
+    """self.path 에서 나온 변수들(path = self.path.split(...)[0], u = urlparse(self.path) ...)."""
+    names = set()
+    changed = True
+    while changed:
+        changed = False
+        for node in ast.walk(func):
+            if not (isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)):
+                continue
+            uses = any(_is_self_path(n) or (isinstance(n, ast.Name) and n.id in names) for n in ast.walk(node.value))
+            if uses and node.targets[0].id not in names:
+                names.add(node.targets[0].id)
+                changed = True
+    return names
+
+
 def _paths_in(func):
+    """요청 경로(self.path 나 거기서 나온 변수)와 비교한 문자열만."""
+    names = _path_names(func)
+
+    def is_request_path(node):
+        return _is_self_path(node) or (isinstance(node, ast.Name) and node.id in names) or \
+            (isinstance(node, ast.Attribute) and node.attr == "path" and isinstance(node.value, ast.Name)
+             and node.value.id in names)
+
     found = []
     for node in ast.walk(func):
-        if not isinstance(node, ast.Compare):
+        if not isinstance(node, ast.Compare) or not is_request_path(node.left):
             continue
-        for comp in [node.left, *node.comparators]:
+        for comp in node.comparators:
             value = _const(comp)
             values = value if isinstance(value, (tuple, list, set)) else [value]
             for v in values:

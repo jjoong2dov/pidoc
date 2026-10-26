@@ -4,6 +4,7 @@ AI 에게는 숫자를 직접 쓰지 말고 {{fact:키}} 자리표시자를 쓰�
 그래도 숫자가 들어오면 초안은 저장하되 그 줄을 보여 주고 종료 1(사람이 고칠 차례).
 """
 
+import fnmatch
 from pathlib import Path
 
 from . import ai, facts
@@ -25,10 +26,13 @@ RULES = """\
 MAX_VALUE = 120
 
 
-def fact_lines(all_facts):
+def fact_lines(all_facts, patterns=("*",)):
+    """AI 에 보낼 사실 목록. [ai] facts 의 패턴("pc:*", "code:config.*")에 맞는 것만."""
     lines = []
     for target in sorted(all_facts):
         for key in sorted(all_facts[target]):
+            if not any(fnmatch.fnmatchcase(f"{target}:{key}", p) for p in patterns):
+                continue
             f = all_facts[target][key]
             value = facts.show_value(f["value"]).replace("\n", " ⏎ ")
             if len(value) > MAX_VALUE:
@@ -44,7 +48,7 @@ def command_lines(cfg):
 
 def build_prompt(cfg, template_text):
     parts = [RULES, "## 사실 목록"]
-    parts += fact_lines(facts.load_all(cfg.facts_dir)) or ["(없음)"]
+    parts += fact_lines(facts.load_all(cfg.facts_dir), cfg.ai.get("facts", ["*"])) or ["(없음)"]
     parts += ["", "## 수집한 명령(pidoc-run 에 쓸 수 있는 것)"]
     parts += command_lines(cfg) or ["(없음)"]
     parts += ["", "## 틀", template_text]
@@ -52,6 +56,7 @@ def build_prompt(cfg, template_text):
 
 
 def draft(cfg, template, out, provider=None):
+    out = cfg.inside(out, "--out", base=Path.cwd())
     template = Path(template)
     if not template.is_file():
         raise PidocError(f"틀 파일이 없습니다: {template}")
@@ -61,7 +66,6 @@ def draft(cfg, template, out, provider=None):
         print(f"AI 를 부르지 않고 프롬프트만 저장했습니다: {cfg.rel(record / 'prompt.txt')}")
         return OK
     text = ai.strip_fence(text)
-    out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text, encoding="utf-8")
     print(f"초안: {cfg.rel(out)} (호출 기록 {cfg.rel(record)})")

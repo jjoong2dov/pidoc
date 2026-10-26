@@ -129,7 +129,10 @@ def parser():
     s.add_argument("dir", nargs="?", default=".", help="대상 저장소 (기본: 지금 폴더)")
     s.set_defaults(func=cmd_init)
 
-    s = sub.add_parser("collect", help="명령 실행 → 증거 저장 → 사실 갱신")
+    s = sub.add_parser("collect", help="명령 실행 → 증거 저장 → 사실 갱신",
+                       description="pidoc.toml 의 명령을 셸 없이 실행해 증거를 남기고 사실을 뽑는다. "
+                                   "collect.allow_programs 는 보안 경계가 아니라 실수 방지 목록이다"
+                                   "(허용한 프로그램이 할 수 있는 일은 다 할 수 있다).")
     s.add_argument("--target", help="이 대상만")
     s.add_argument("--only", nargs="+", metavar="ID", help="이 명령들만")
     s.add_argument("--keep-raw", action="store_true",

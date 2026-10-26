@@ -7,10 +7,11 @@ facts/<target>.json
 """
 
 import json
+import math
 import re
 from pathlib import Path
 
-from .util import PidocError, age_days, read_json, write_json
+from .util import PidocError, age_days, parse_iso, read_json, write_json
 
 TRUE = ("true", "yes", "on", "1")
 FALSE = ("false", "no", "off", "0")
@@ -36,9 +37,17 @@ def _json_path(data, path):
     return node
 
 
+def decode(data):
+    """UTF-8 로만 읽는다. 깨진 바이트를 �로 바꾸면 서로 다른 출력이 같아 보이므로 실패로 다룬다."""
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as e:
+        raise FactError(f"출력이 UTF-8 이 아닙니다({e.start}번째 바이트) — 명령에 LC_ALL=C.UTF-8 을 주거나 출력을 확인하세요")
+
+
 def extract_raw(rule, data):
     """규칙대로 출력(bytes)에서 값을 뽑는다(타입 변환 전)."""
-    text = data.decode("utf-8", errors="replace")
+    text = decode(data)
     how = rule["extract"]
     if how == "stdout_all":
         return text.rstrip("\n")
@@ -80,7 +89,10 @@ def convert(value, kind, sep=","):
         if kind == "float":
             if isinstance(value, bool):
                 raise FactError("true/false 는 float 가 아닙니다")
-            return float(value) if isinstance(value, (int, float)) else float(str(value).strip())
+            number = float(value) if isinstance(value, (int, float)) else float(str(value).strip())
+            if not math.isfinite(number):
+                raise FactError(f"nan·inf 는 사실이 될 수 없습니다: {value!r}")
+            return number
         if kind == "bool":
             if isinstance(value, bool):
                 return value
@@ -123,13 +135,38 @@ def path_for(facts_dir, target):
     return Path(facts_dir) / f"{target}.json"
 
 
+def validate(path, key, fact):
+    """사실 하나의 형식: 필수 필드, type 과 실제 값, 유한한 float, 오프셋 있는 시각."""
+    where = f"{path}: 사실 {key}"
+    if not isinstance(fact, dict) or "value" not in fact or "type" not in fact:
+        raise PidocError(f"{where}: value·type 이 있어야 합니다")
+    if fact["type"] not in ("string", "int", "float", "list", "bool"):
+        raise PidocError(f"{where}: 모르는 type {fact['type']!r}")
+    actual = type_of(fact["value"])
+    if isinstance(fact["value"], dict) or actual != fact["type"]:
+        shown = "표" if isinstance(fact["value"], dict) else actual
+        raise PidocError(f"{where}: type 이 {fact['type']} 인데 값은 {shown}")
+    if actual == "float" and not math.isfinite(fact["value"]):
+        raise PidocError(f"{where}: nan·inf 는 쓸 수 없습니다")
+    at = fact.get("collected_at")
+    if at is not None:
+        try:
+            ok = parse_iso(at).tzinfo is not None
+        except (TypeError, ValueError):
+            ok = False
+        if not ok:
+            raise PidocError(f"{where}: collected_at 은 오프셋 있는 ISO8601 이어야 합니다: {at!r}")
+
+
 def load_file(facts_dir, target):
     path = path_for(facts_dir, target)
     if not path.is_file():
         return {"schema": 1, "target": target, "alias": target, "facts": {}}
     data = read_json(path)
-    if data.get("schema") != 1:
-        raise PidocError(f"{path}: 모르는 사실 파일 형식(schema {data.get('schema')})")
+    if not isinstance(data, dict) or data.get("schema") != 1 or not isinstance(data.get("facts"), dict):
+        raise PidocError(f"{path}: 모르는 사실 파일 형식(schema {data.get('schema') if isinstance(data, dict) else '?'})")
+    for key, fact in data["facts"].items():
+        validate(path, key, fact)
     return data
 
 
@@ -148,8 +185,8 @@ def load_all(facts_dir):
     folder = Path(facts_dir)
     if folder.is_dir():
         for path in sorted(folder.glob("*.json")):
-            data = read_json(path)
-            result[data.get("target", path.stem)] = data.get("facts", {})
+            data = load_file(folder, path.stem)
+            result[data.get("target", path.stem)] = data["facts"]
     return result
 
 

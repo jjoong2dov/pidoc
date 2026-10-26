@@ -5,21 +5,23 @@
 
 import importlib
 import json
+from dataclasses import dataclass
 
 from .. import doc as docmod
 from ..facts import load_all as load_facts
+from ..verify import Verifier
 from ..util import CHECK_FAILED, OK, PidocError, now
 
 NAMES = ("facts", "numbers", "quote", "run", "links", "terms", "secrets")
 
 
+@dataclass
 class Finding:
-    def __init__(self, file, line, check, message, level="error"):
-        self.file = file
-        self.line = line
-        self.check = check
-        self.message = message
-        self.level = level
+    file: str           # 대상 저장소 기준 경로
+    line: int | None    # 1부터, 파일 단위면 None
+    check: str          # 검사 이름
+    message: str
+    level: str = "error"   # error | warn
 
     def text(self):
         where = f"{self.file}:{self.line}:" if self.line else f"{self.file}:"
@@ -39,6 +41,7 @@ class Context:
         self.docs = [docmod.load(f, cfg.default_target) for f in files]
         self.all_files = all_files      # 파일을 고르지 않고 전부 검사하는가
         self.facts = load_facts(cfg.facts_dir)
+        self.verifier = Verifier(cfg)
         self.now = now()
         self.rerun = rerun
 

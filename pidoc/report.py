@@ -68,7 +68,7 @@ def report(cfg, junit, template=None, out=None):
         for n, msg in errors:
             print(f"{cfg.rel(tpath)}:{n}: [render] {msg}")
         return CHECK_FAILED
-    out = Path(out) if out else cfg.out_dir / "test-report.md"
+    out = cfg.inside(out, "--out", base=Path.cwd()) if out else cfg.out_dir / "test-report.md"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(rendered, encoding="utf-8")
     print(f"보고서: {cfg.rel(out)}")

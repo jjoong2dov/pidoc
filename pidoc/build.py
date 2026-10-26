@@ -110,10 +110,41 @@ def _weasyprint():
     return HTML
 
 
-def build_pdf(html_path):
+def _allowed(cfg, url):
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    if parsed.scheme == "data":
+        return True
+    return parsed.scheme == "file" and Path(unquote(parsed.path)).resolve().is_relative_to(cfg.root)
+
+
+def url_fetcher(cfg):
+    """PDF 를 만들 때 가져올 수 있는 주소: data: 와 저장소 안 file: 만(file:///etc/... 나 바깥 http 차단)."""
+    try:
+        from weasyprint.urls import URLFetcher          # WeasyPrint 67 이후
+    except ImportError:
+        URLFetcher = None
+    if URLFetcher is not None:
+        class SafeFetcher(URLFetcher):
+            def fetch(self, url, headers=None):
+                if not _allowed(cfg, url):
+                    raise ValueError(f"PDF 에서 가져오지 않는 주소: {url}")
+                return super().fetch(url, headers)
+        return SafeFetcher(allowed_protocols=("data", "file"))
+
+    from weasyprint import default_url_fetcher        # 옛 판
+
+    def fetch(url, *args, **kwargs):
+        if not _allowed(cfg, url):
+            raise ValueError(f"PDF 에서 가져오지 않는 주소: {url}")
+        return default_url_fetcher(url, *args, **kwargs)
+    return fetch
+
+
+def build_pdf(cfg, html_path):
     HTML = _weasyprint()
     pdf = Path(html_path).with_suffix(".pdf")
-    HTML(filename=str(html_path)).write_pdf(str(pdf))
+    HTML(filename=str(html_path), url_fetcher=url_fetcher(cfg)).write_pdf(str(pdf))
     return pdf
 
 
@@ -134,11 +165,14 @@ def build(cfg, pdf=False):
         raise PidocError(f"만들 문서가 없습니다: {cfg.rel(cfg.src_dir)}/*.md")
     code = render(cfg, files)
     if code != OK:
-        print("렌더에 실패해 HTML 을 만들지 않았습니다")
+        for old in (cfg.out_dir / "site.html", cfg.out_dir / "site.pdf"):
+            if old.exists():
+                old.unlink()
+        print("렌더에 실패해 HTML 을 만들지 않았습니다(이전 site.html·site.pdf 도 지움)")
         return code
     outs = [(cfg.rel(f), docmod.out_path(cfg, f)) for f in files]
     page = build_html(cfg, outs)
     print(f"HTML: {cfg.rel(page)}")
     if pdf:
-        print(f"PDF: {cfg.rel(build_pdf(page))}")
+        print(f"PDF: {cfg.rel(build_pdf(cfg, page))}")
     return OK

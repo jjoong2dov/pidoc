@@ -119,3 +119,12 @@ def latest_with(runs_dir, target, cmd_id, ok_only=True):
             continue
         return run
     return None
+
+
+def latest_attempt(runs_dir, target, cmd_id):
+    """대상 target 에서 cmd_id 를 실행한 가장 최근 run(성공·실패 상관없이)."""
+    return latest_with(runs_dir, target, cmd_id, ok_only=False)
+
+
+def run_ok(run, cmd_id):
+    return bool(run.manifest.get("results", {}).get(cmd_id, {}).get("ok"))

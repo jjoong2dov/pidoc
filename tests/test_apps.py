@@ -86,7 +86,7 @@ def test_report(miniproj):
     assert "- 시험 5개 중 통과 3개" in text
     assert "- 실패 1개, 오류 0개, 건너뜀 1개" in text
     assert "- 걸린 시간 1.2초" in text
-    assert "- 실패한 시험: tests.test_a::test_bad" in text
+    assert "- 실패한 시험: tests.test\\_a::test\\_bad" in text      # 본문 사실은 Markdown 이스케이프
     assert "`junit.xml`" in text
     f = json.loads((miniproj / "docs/facts/test.json").read_text())["facts"]
     assert f["test.passed"]["value"] == 3 and f["test.time"]["type"] == "float"

@@ -7,6 +7,7 @@ import ipaddress
 import os
 import re
 import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 
 from .util import PidocError, sha256_file
@@ -26,13 +27,18 @@ COLLECT_DEFAULTS = {
 }
 
 
+# allow_programs 에 넣을 수 없는 것: 받은 인자를 다시 명령으로 실행하는 셸·실행기
+NOT_ALLOWED = {"sh", "bash", "dash", "zsh", "ksh", "fish", "env", "sudo", "su", "doas", "xargs",
+               "nohup", "timeout", "ssh", "busybox", "eval", "exec", "nice", "stdbuf", "script"}
+
+
+@dataclass
 class Target:
-    def __init__(self, name, kind, alias, host=None, cwd=None):
-        self.name = name
-        self.kind = kind
-        self.alias = alias
-        self.host = host
-        self.cwd = cwd
+    name: str
+    kind: str                 # local | ssh
+    alias: str                # 문서에 나갈 이름
+    host: str | None = None   # ssh 대상의 주소(공개 증거에는 남기지 않음)
+    cwd: str | None = None
 
 
 class Config:
@@ -55,6 +61,7 @@ class Config:
         self.check = data.get("check", {})
         self.mask = data.get("mask", {})
         self.build = data.get("build", {})
+        self.walk = data.get("walk", {})
 
     # 자주 쓰는 폴더
     @property
@@ -87,6 +94,14 @@ class Config:
             return path.relative_to(self.root).as_posix()
         except ValueError:
             return str(path)
+
+    def inside(self, rel, what, base=None):
+        """대상 저장소 안의 경로만 돌려준다. 절대 경로·../·심볼릭 링크로 밖으로 나가면 오류."""
+        base = Path(base) if base else self.root
+        path = (base / rel).resolve()
+        if not path.is_relative_to(self.root):
+            raise PidocError(f"{what}: 저장소 밖 경로는 쓸 수 없습니다: {rel}")
+        return path
 
     def target(self, name):
         if name not in self.targets:
@@ -145,6 +160,8 @@ def _check_targets(cfg, data):
                 raise PidocError(f"설정 오류: {where}.host 는 - 로 시작할 수 없습니다")
         if "cwd" in t:
             _type(t["cwd"], "str", f"{where}.cwd")
+        if kind == "local" and "cwd" in t:
+            cfg.inside(t["cwd"], f"{where}.cwd")
         cfg.targets[name] = Target(name, kind, alias, host, t.get("cwd"))
     default = cfg.default_target or next(iter(cfg.targets))
     if default not in cfg.targets:
@@ -162,6 +179,10 @@ def _check_collect(cfg):
     _type(c["env_allow"], "strlist", "collect.env_allow")
     _type(c["env_set"], "strdict", "collect.env_set")
     _type(c["allow_programs"], "strlist", "collect.allow_programs")
+    bad = sorted(set(c["allow_programs"]) & NOT_ALLOWED)
+    if bad:
+        raise PidocError(f"설정 오류: 셸·실행기는 allow_programs 에 넣을 수 없습니다: {', '.join(bad)} "
+                         "(받은 인자를 다시 명령으로 실행하므로 목록이 의미가 없어집니다)")
 
 
 def _check_fact(rule, where):
@@ -207,12 +228,16 @@ def _check_commands(cfg):
         _type(argv, "strlist", f"{where}.argv")
         if not argv:
             raise PidocError(f"설정 오류: {where}.argv 가 비었습니다")
+        if any(re.search(r"[\x00-\x1f]", a) for a in argv):
+            raise PidocError(f"설정 오류: {where}.argv 에 줄바꿈·제어 문자를 쓸 수 없습니다")
         cmd.setdefault("targets", [cfg.default_target])
         _type(cmd["targets"], "strlist", f"{where}.targets")
         for t in cmd["targets"]:
             cfg.target(t)
         if "cwd" in cmd:
             _type(cmd["cwd"], "str", f"{where}.cwd")
+            if any(cfg.targets[t].kind == "local" for t in cmd["targets"]):
+                cfg.inside(cmd["cwd"], f"{where}.cwd")
         if "timeout_s" in cmd:
             _type(cmd["timeout_s"], "num", f"{where}.timeout_s")
         cmd.setdefault("ok_exit", [0])
@@ -257,11 +282,14 @@ def _check_extract(cfg):
     for key in ("config_example", "config_module", "config_defaults"):
         if key in e:
             _type(e[key], "str", f"extract.{key}")
+    for rel in e.get("paths", []) + [e[k] for k in ("config_example", "config_module") if k in e]:
+        cfg.inside(rel, "extract")
 
 
 def _check_ai(cfg):
     a = cfg.ai
-    _keys(a, ("provider", "model", "timeout_s"), "ai")
+    _keys(a, ("provider", "model", "timeout_s", "facts"), "ai")
+    _type(a.get("facts", ["*"]), "strlist", "ai.facts")
     if a.get("provider", "none") not in ("claude", "codex", "none"):
         raise PidocError(f"설정 오류: ai.provider 는 claude | codex | none: {a['provider']!r}")
     if "model" in a:
@@ -270,7 +298,8 @@ def _check_ai(cfg):
         _type(a["timeout_s"], "num", "ai.timeout_s")
 
 
-CHECK_KEYS = ("numbers", "number_allow", "stale_deps", "unused_facts", "terms", "banned", "ip_allow", "email_allow")
+CHECK_KEYS = ("numbers", "code_numbers", "number_allow", "stale_deps", "unused_facts", "terms", "banned",
+              "ip_allow", "email_allow", "home_allow")
 
 
 def _check_check(cfg):
@@ -278,9 +307,11 @@ def _check_check(cfg):
     _keys(c, CHECK_KEYS, "check")
     if c.get("numbers", "error") not in ("error", "warn", "off"):
         raise PidocError(f"설정 오류: check.numbers 는 error | warn | off: {c['numbers']!r}")
+    if c.get("code_numbers", "warn") not in ("error", "warn", "off"):
+        raise PidocError(f"설정 오류: check.code_numbers 는 error | warn | off: {c['code_numbers']!r}")
     if c.get("unused_facts", "warn") not in ("warn", "off"):
         raise PidocError(f"설정 오류: check.unused_facts 는 warn | off: {c['unused_facts']!r}")
-    for key in ("number_allow", "ip_allow", "email_allow"):
+    for key in ("number_allow", "ip_allow", "email_allow", "home_allow"):
         _type(c.get(key, []), "strlist", f"check.{key}")
     for key in ("terms", "banned"):
         if key in c:
@@ -313,7 +344,13 @@ def _check_build(cfg):
     _type(b.get("order", []), "strlist", "build.order")
 
 
-SECTIONS = ("project", "targets", "collect", "command", "redact", "extract", "ai", "check", "mask", "build")
+def _check_walk(cfg):
+    w = cfg.walk
+    _keys(w, ("timeout_s",), "walk")
+    _type(w.get("timeout_s", 600), "num", "walk.timeout_s")
+
+
+SECTIONS = ("project", "targets", "collect", "command", "redact", "extract", "ai", "check", "mask", "build", "walk")
 
 
 def load(path):
@@ -338,6 +375,7 @@ def load(path):
     _check_check(cfg)
     _check_mask(cfg)
     _check_build(cfg)
+    _check_walk(cfg)
     return cfg
 
 

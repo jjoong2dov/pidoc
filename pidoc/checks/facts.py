@@ -1,4 +1,4 @@
-"""facts: 사실 참조 검사 — 없는 키, 변환·타입, 만료, 쓰이지 않는 사실(경고)."""
+"""facts: 사실 참조 검사 — 없는 키, 변환·타입, 만료, 증거와 맞는지(verify.py), 쓰이지 않는 사실(경고)."""
 
 from . import Finding
 from ..render import RenderError, resolve
@@ -12,7 +12,8 @@ def run(ctx):
     for d in ctx.docs:
         for ref in d.refs():
             try:
-                resolve(ref, ctx.facts, ctx.now)
+                context = "code" if d.in_fence[ref.line - 1] else "prose"
+                resolve(ref, ctx.facts, ctx.now, ctx.verifier, context)
             except RenderError as e:
                 findings.append(Finding(ctx.cfg.rel(d.path), ref.line, "facts", str(e)))
             used.add(ref.full_key)

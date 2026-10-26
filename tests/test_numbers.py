@@ -51,10 +51,11 @@ def test_heading_number_only_first():
 
 
 def test_table_only_first_column():
-    assert numbers_in("| 2 | 주기 | 5 |", ALLOW) == ["5"]
+    assert numbers_in("| 1 | 주기 | 5 |", ALLOW) == ["5"]
+    assert numbers_in("| 2 | 주기 | 5 |", ALLOW) == ["2", "5"]      # 표가 2 부터 시작하면 순번이 아니다
 
 
-def test_scan_skips_fences_and_ok_comments():
+def test_scan_code_warns_and_ok_comments():
     text = """\
 # 제목
 
@@ -71,9 +72,11 @@ $ uname -r
 남은 것 7
 """
     found = scan_text(text)
-    assert [(n, level) for n, level, _ in found] == [(9, "error"), (13, "error")]
-    assert "이유를 적으세요" in found[0][2]
-    assert "근거 없는 숫자: 7" in found[1][2]
+    assert [(n, level) for n, level, _ in found] == [(5, "warn"), (9, "error"), (13, "error")]
+    assert "코드 안 숫자: 6.12.47" in found[0][2]                   # 코드 안은 경고(리뷰 7번)
+    assert "이유를 적으세요" in found[1][2]
+    assert "근거 없는 숫자: 7" in found[2][2]
+    assert scan_text(text, code_level="off")[0][0] == 9
 
 
 def test_korean_numerals_and_vague_words_warn_only():

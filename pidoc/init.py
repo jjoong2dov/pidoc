@@ -36,14 +36,25 @@ hostname = true              # 실제 hostname → 대상 alias
 patterns = [ {{ re = '\\b(?:\\d{{1,3}}\\.){{3}}\\d{{1,3}}\\b', to = "<ip>" }} ]
 '''
 
-GITIGNORE = """\
-# pidoc: 결과물과 비공개 파일
-out/
-evidence/private/
-banned.txt
-"""
+# docs/.gitignore 에 꼭 있어야 하는 줄: 결과물, 가리기 전 원본, 금지어 목록, AI 호출 기록(프롬프트에 값이 들어감)
+IGNORE_LINES = ["out/", "evidence/private/", "banned.txt", "ai/"]
 
 FOLDERS = ("src", "facts", "evidence/runs", "ai")
+
+
+def ensure_gitignore(path):
+    """이미 있는 .gitignore 는 덮어쓰지 않고, 빠진 줄만 덧붙인다."""
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    have = {line.strip() for line in text.splitlines()}
+    missing = [line for line in IGNORE_LINES if line not in have]
+    if not missing:
+        return
+    if text and not text.endswith("\n"):
+        text += "\n"
+    if not text:
+        text = "# pidoc: 결과물과 비공개 파일\n"
+    path.write_text(text + "\n".join(missing) + "\n", encoding="utf-8")
+    print(f"{path.name} 에 더함: {', '.join(missing)}")
 
 
 def init(repo):
@@ -57,9 +68,7 @@ def init(repo):
     for folder in FOLDERS:
         (docs / folder).mkdir(parents=True, exist_ok=True)
     toml.write_text(SAMPLE_TOML.format(name=repo.name), encoding="utf-8")
-    ignore = docs / ".gitignore"
-    if not ignore.exists():
-        ignore.write_text(GITIGNORE, encoding="utf-8")
+    ensure_gitignore(docs / ".gitignore")
     print(f"만들었습니다: {toml}")
     print("다음: pidoc.toml 의 [[command]] 를 고친 뒤 `pidoc collect`")
     return 0

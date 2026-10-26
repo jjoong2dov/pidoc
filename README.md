@@ -57,6 +57,8 @@ pidoc collect --target pc
 [pc] 사실 6개 갱신 → docs/facts/pc.json
 ```
 
+- 출력이 `max_output` 을 넘어 잘리거나, UTF-8 이 아니거나, 사실 하나라도 못 뽑으면 그 명령은 실패이고 그 명령의 사실은 하나도 갱신하지 않습니다.
+- `--token 값`·`--password=값` 같은 argv 의 민감한 값은 증거에 `<가림>` 으로 남습니다.
 - 실행 기록은 `docs/evidence/runs/<run-id>/` 에: `manifest.json`, 명령마다 `.stdout`·`.stderr`(원시 바이트)·`.json`(argv, 종료 코드, 걸린 시간, sha256 ...).
 - "가림 1곳": pimon 출력의 `"host"` 에 든 이 PC 의 실제 hostname 을 대상 별칭(`devpc`)으로 바꿨다는 뜻입니다.
 - `pidoc facts` 로 사실을 봅니다(키·값·타입·나이·출처 run).
@@ -105,8 +107,9 @@ pidoc stale --since HEAD    # git diff 로 (CI 에서 PR 마다)
 | `<!-- pidoc-target: pc -->` | 첫 줄들(머리말). 대상을 적지 않은 사실 참조의 기본 대상 |
 | `<!-- pidoc-deps: pimon/server.py -->` | 이 문서가 기대는 파일(stale 용) |
 | `{{fact:키}}`, `{{fact:대상:키}}` | 사실 값. 없거나 만료면 render·check 오류 |
-| `{{fact:키\|int}}` `\|round1` `\|join` `\|code` | 정해진 표시 변환만(이어 쓰기 가능) |
-| ```` ```console pidoc-run=명령id target=pc ```` | 본문을 비워 두면 render 가 최신 성공 run 의 stdout 으로 채움 |
+| `{{fact:키\|int}}` `\|round1` `\|join` `\|code` `\|raw` | 정해진 표시 변환만(이어 쓰기 가능). 본문에 넣는 값은 Markdown 특수 문자를 이스케이프하고, `\|raw` 만 그대로 넣습니다 |
+| ```` ```console pidoc-run=명령id target=pc ```` | 본문을 비워 두면 render 가 그 명령의 최신 수집 stdout 으로 채움(최신 수집이 실패했으면 오류) |
+| ```` ```sh pidoc-ok=이유 ```` | 이 코드 블록의 숫자는 근거가 있다고 표시 |
 | ```` ```python pidoc-quote=pimon/config.py#L9-L26 ```` | render 가 파일에서 채움. 본문이 있으면 check 가 파일과 대조 |
 | 줄 끝 `<!-- pidoc-ok: 이유 -->` | 그 줄의 숫자를 일부러 허용(이유 필수) |
 
@@ -134,13 +137,13 @@ pidoc stale --since HEAD    # git diff 로 (CI 에서 PR 마다)
 
 | 검사 | 보는 것 |
 |---|---|
-| facts | 없는 키, 변환·타입, 만료(`max_age_days`), 쓰이지 않는 사실(경고) |
-| numbers | 본문 숫자 리터럴. 펜스·인라인 코드, 머리글 번호, 번호 목록, 표 첫 열 순번, 장·절 참조, `IPv4`·`UTF-8` 같은 이름, 커밋 해시, `number_allow`, `pidoc-ok` 는 뺀다. 한글 수사("두 번")·비교 표현("최신", "빠르다")은 경고 |
+| facts | 없는 키, 변환·타입, 만료(`max_age_days`), **증거와 맞는지**(그 run 의 stdout 에서 같은 규칙으로 다시 뽑아 비교, 코드 사실은 원본 파일 sha256, 더 최근 수집이 실패했으면 오류), 쓰이지 않는 사실(경고) |
+| numbers | 본문 숫자 리터럴(오류). 머리글 번호, 두 자리까지의 번호 목록, 1부터 느는 표 첫 열, 장·절 참조, `IPv4`·`UTF-8` 같은 이름, 커밋 해시, `number_allow`, `pidoc-ok` 는 뺀다. 코드(펜스·인라인)의 숫자는 `check.code_numbers` 등급(기본 경고). 한글 수사("두 번")·비교 표현("최신", "빠르다")은 경고 |
 | quote | pidoc-quote 블록이 실제 파일과 같은지 |
 | run | pidoc-run 블록의 증거가 있는지, 본문이 있으면 증거와 같은지(정규화 뒤). `--rerun` 이면 지금 다시 실행해 비교 |
 | links | 상대 링크의 파일과 `#앵커` |
 | terms | `docs/terms.toml` 용어집(`"바른말" = ["틀린말", ...]`) |
-| secrets | IP·이메일·실제 hostname·금지어(`docs/banned.txt`, 저장소에 넣지 않음). src·out·facts·evidence 모두 |
+| secrets | IPv4·IPv6·MAC·이메일·실제 hostname·금지어(`docs/banned.txt`, 저장소에 넣지 않음)·개인키·Bearer·흔한 API 토큰·URL 안 비밀번호·홈 폴더 경로. src·out·facts·evidence·ai 모두. **휴리스틱이라 모든 비밀을 찾지는 못합니다** |
 
 ## 설정 (docs/pidoc.toml) 요약
 
@@ -155,8 +158,9 @@ pidoc stale --since HEAD    # git diff 로 (CI 에서 PR 마다)
 | `[redact]` | `patterns = [{re, to}]`, `hostname`, `names` — 수집 직후 증거·사실에 적용 |
 | `[mask]` | `time`, `hostname`, `pid`, `patterns` — run 비교 때만 |
 | `[extract]` | `paths`, `config_example`, `config_module`, `config_defaults` |
-| `[check]` | `numbers`(error\|warn\|off), `number_allow`, `stale_deps`, `unused_facts`, `terms`, `banned`, `ip_allow`, `email_allow` |
-| `[ai]` | `provider`(claude\|codex\|none, 기본 none), `model`, `timeout_s` |
+| `[check]` | `numbers`·`code_numbers`(error\|warn\|off), `number_allow`, `stale_deps`, `unused_facts`, `terms`, `banned`, `ip_allow`, `email_allow`, `home_allow`(기본 ["pi"]) |
+| `[ai]` | `provider`(claude\|codex\|none, 기본 none), `model`, `timeout_s`, `facts`(AI 에 보낼 사실 패턴, 기본 ["*"]) |
+| `[walk]` | `timeout_s`(단계마다, 기본 600) |
 | `[build]` | `title`, `order` |
 
 ## 파이에서 수집 (ssh)
@@ -170,6 +174,18 @@ pidoc collect --target pi
   먼저 `ssh pi@<주소>` 로 한 번 접속해 호스트 키를 확인·저장하고, 키 로그인을 준비하세요.
 - 원격 명령은 `shlex.join` 으로 한 줄이 되어 원격 셸이 해석합니다. 그래서 ssh 대상은 `allow_programs` 가 꼭 있어야 하고,
   목록 밖 프로그램은 실행하지 않습니다.
+
+### allow_programs 는 보안 경계가 아니라 실수 방지 목록입니다
+
+첫 argv 의 이름만 봅니다. `python3` 을 허용하면 python3 이 할 수 있는 일은 무엇이든 할 수 있습니다.
+설정 파일을 고칠 수 있는 사람은 무엇이든 실행할 수 있다고 보세요. 목록이 막는 것은 오타와 실수입니다.
+그래도 흔한 구멍은 막아 둡니다.
+
+- 셸·실행기(`sh`, `bash`, `env`, `sudo`, `xargs`, `timeout`, `ssh` …)는 목록에 넣을 수 없습니다(설정 오류).
+- 인라인 코드 실행(`python3 -c`, `perl -e`, `node -e` …)은 거절합니다. 스크립트 파일로 만들어 저장소에 두세요.
+- argv 에 줄바꿈·제어 문자를 쓸 수 없습니다.
+
+정말 격리가 필요하면 수집 전용 계정(권한 없는 사용자)이나 컨테이너에서 돌리세요.
 - 파이가 없는 독자는 저장소에 들어 있는 증거로 `pidoc replay docs/evidence/runs` 를 돌리면 같은 사실을 얻습니다.
 
 ## AI 초안
@@ -181,6 +197,9 @@ pidoc draft 틀.md --out docs/src/usage.md --ai none      # 부르지 않고 프
 ```
 
 호출마다 `docs/ai/<시각>-draft/` 에 `prompt.txt`, `input.sha256`, `meta.json`(도구·argv·모델·시각·종료 코드), `raw.txt`(받은 그대로)가 남습니다.
+프롬프트에는 사실 값이 들어가므로 `docs/ai/` 는 기본으로 git 에 넣지 않습니다(`pidoc init` 이 .gitignore 에 넣음).
+보낼 사실은 `[ai] facts = ["pc:*", "code:config.*"]` 처럼 줄일 수 있고, 보내기 전에 secrets 검사와 같은 규칙으로
+프롬프트를 훑어 걸리면 보내지 않습니다.
 
 ## CI 에서 (예: GitHub Actions)
 

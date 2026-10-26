@@ -5,6 +5,7 @@
   none    호출하지 않고 프롬프트만 저장(오프라인, 다른 도구에 붙여 넣기용)
 
 기록: prompt.txt, input.sha256, meta.json(도구·argv·모델·시각·종료 코드), raw.txt(받은 그대로)
+기록에는 사실 값이 들어가므로 docs/.gitignore 에 ai/ 를 넣는다(pidoc init). 보내기 전에 비밀 검사를 한다.
 """
 
 import subprocess
@@ -43,12 +44,23 @@ def new_record_dir(ai_dir, purpose):
     return path
 
 
+def check_prompt(cfg, prompt):
+    """보내기 전에 비밀 검사(secrets 와 같은 규칙). 걸리면 보내지도 저장하지도 않는다."""
+    from .checks.secrets import Scanner
+    found = Scanner(cfg).scan(prompt)
+    if found:
+        lines = "; ".join(f"프롬프트 {n}줄: {msg}" for n, msg in found[:5])
+        raise PidocError(f"프롬프트에 공개하면 안 되는 값이 있어 AI 에 보내지 않았습니다 — {lines}"
+                         " (틀을 고치거나 [ai] facts 로 보낼 사실을 줄이세요)")
+
+
 def call(cfg, provider, prompt, purpose):
     """AI 를 부른다. (받은 글 또는 None, 기록 폴더)"""
     settings = cfg.ai
     provider = provider or settings.get("provider", "none")
     model = settings.get("model")
     timeout = settings.get("timeout_s", 600)
+    check_prompt(cfg, prompt)
     record = new_record_dir(cfg.ai_dir, purpose)
     data = prompt.encode("utf-8")
     (record / "prompt.txt").write_bytes(data)

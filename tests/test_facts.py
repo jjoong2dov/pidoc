@@ -53,8 +53,8 @@ def test_convert_rejects(value, kind):
 
 
 def test_update_file_keeps_old_keys(tmp_path):
-    facts.update_file(tmp_path, "pc", "devpc", {"a.b": {"value": 1}})
-    facts.update_file(tmp_path, "pc", "devpc", {"c.d": {"value": 2}})
+    facts.update_file(tmp_path, "pc", "devpc", {"a.b": {"value": 1, "type": "int"}})
+    facts.update_file(tmp_path, "pc", "devpc", {"c.d": {"value": 2, "type": "int"}})
     data = facts.load_file(tmp_path, "pc")
     assert set(data["facts"]) == {"a.b", "c.d"}
     assert (tmp_path / "pc.json").read_text().endswith("}\n")

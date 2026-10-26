@@ -110,7 +110,7 @@ def notes(cfg, rev_range, template=None, out=None, provider=None, check_file=Non
     if text is None:
         print(f"AI 를 부르지 않고 프롬프트만 저장했습니다: {cfg.rel(record / 'prompt.txt')}")
         return OK
-    out = Path(out) if out else cfg.src_dir / "release-notes.md"
+    out = cfg.inside(out, "--out", base=Path.cwd()) if out else cfg.src_dir / "release-notes.md"
     out.parent.mkdir(parents=True, exist_ok=True)
     text = ai.strip_fence(text)
     out.write_text(text, encoding="utf-8")

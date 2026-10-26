@@ -51,6 +51,7 @@ class Config:
         self.redact = data.get("redact", {})
         self.extract = data.get("extract", {})
         self.ai = data.get("ai", {})
+        self.check = data.get("check", {})
 
     # 자주 쓰는 폴더
     @property
@@ -266,7 +267,25 @@ def _check_ai(cfg):
         _type(a["timeout_s"], "num", "ai.timeout_s")
 
 
-SECTIONS = ("project", "targets", "collect", "command", "redact", "extract", "ai")
+CHECK_KEYS = ("numbers", "number_allow", "stale_deps", "unused_facts")
+
+
+def _check_check(cfg):
+    c = cfg.check
+    _keys(c, CHECK_KEYS, "check")
+    if c.get("numbers", "error") not in ("error", "warn", "off"):
+        raise PidocError(f"설정 오류: check.numbers 는 error | warn | off: {c['numbers']!r}")
+    if c.get("unused_facts", "warn") not in ("warn", "off"):
+        raise PidocError(f"설정 오류: check.unused_facts 는 warn | off: {c['unused_facts']!r}")
+    _type(c.get("number_allow", []), "strlist", "check.number_allow")
+    deps = c.get("stale_deps", {})
+    if not isinstance(deps, dict):
+        raise PidocError("설정 오류: check.stale_deps 는 { \"문서\" = [\"파일\", ...] } 표여야 합니다")
+    for name, files in deps.items():
+        _type(files, "strlist", f"check.stale_deps.{name}")
+
+
+SECTIONS = ("project", "targets", "collect", "command", "redact", "extract", "ai", "check")
 
 
 def load(path):
@@ -288,6 +307,7 @@ def load(path):
     _check_redact(cfg)
     _check_extract(cfg)
     _check_ai(cfg)
+    _check_check(cfg)
     return cfg
 
 

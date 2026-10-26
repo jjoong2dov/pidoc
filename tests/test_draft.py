@@ -66,7 +66,9 @@ def test_draft_reports_numbers(miniproj, bindir, tmp_path, monkeypatch, capsys):
     setup(miniproj, bindir, tmp_path, monkeypatch, "# 빠른 시작\n\n파이썬 3.12 가 필요하고 5초마다 돕니다.\n")
     assert pidoc("draft", "tmpl.md", "--out", "docs/src/quick.md", "--ai", "claude") == 1
     out = capsys.readouterr().out
-    assert "docs/src/quick.md:3: 파이썬 3.12" in out
+    assert "docs/src/quick.md:3: [numbers] 근거 없는 숫자: 3.12, 5 " in out
+    assert "| 파이썬 3.12 가" in out
+    assert "빠른" not in out.split("초안:")[1].split("\n", 1)[1]   # 제목 '빠른 시작' 은 경고 없음
     assert (miniproj / "docs/src/quick.md").exists()      # 초안은 저장
 
 

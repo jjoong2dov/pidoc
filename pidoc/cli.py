@@ -47,6 +47,23 @@ def cmd_draft(args):
     return draft(cfg, args.template, args.out, args.ai)
 
 
+def cmd_render(args):
+    from . import doc
+    from .render import render
+    cfg = load_config(args)
+    files = doc.src_files(cfg, args.files)
+    if not files:
+        print(f"렌더할 문서가 없습니다: {cfg.rel(cfg.src_dir)}/*.md")
+        return 0
+    return render(cfg, files)
+
+
+def cmd_check(args):
+    from .checks import check
+    cfg = load_config(args)
+    return check(cfg, args.files, args.only, args.json, args.rerun)
+
+
 def cmd_facts(args):
     cfg = load_config(args)
     every = facts.load_all(cfg.facts_dir)
@@ -103,6 +120,17 @@ def parser():
     s.add_argument("--out", required=True, help="초안을 쓸 곳 (예: docs/src/usage.md)")
     s.add_argument("--ai", choices=["claude", "codex", "none"], help="부를 AI (기본: 설정 [ai] provider, 없으면 none)")
     s.set_defaults(func=cmd_draft)
+
+    s = sub.add_parser("render", help="docs/src → docs/out (사실·인용 채우기)")
+    s.add_argument("files", nargs="*", help="이 문서들만 (기본: docs/src/*.md 전부)")
+    s.set_defaults(func=cmd_render)
+
+    s = sub.add_parser("check", help="문서 시험 (facts, numbers, ...)")
+    s.add_argument("files", nargs="*", help="이 문서들만 (기본: docs/src/*.md 전부)")
+    s.add_argument("--only", nargs="+", metavar="검사", help="이 검사들만")
+    s.add_argument("--json", action="store_true", help="결과를 JSON 으로")
+    s.add_argument("--rerun", action="store_true", help="pidoc-run 블록을 지금 다시 실행해 비교")
+    s.set_defaults(func=cmd_check)
 
     s = sub.add_parser("facts", help="사실 목록 보기")
     s.add_argument("--target", help="이 대상만")

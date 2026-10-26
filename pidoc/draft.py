@@ -4,10 +4,10 @@ AI 에게는 숫자를 직접 쓰지 말고 {{fact:키}} 자리표시자를 쓰�
 그래도 숫자가 들어오면 초안은 저장하되 그 줄을 보여 주고 종료 1(사람이 고칠 차례).
 """
 
-import re
 from pathlib import Path
 
 from . import ai, facts
+from .checks import numbers
 from .util import CHECK_FAILED, OK, PidocError
 
 RULES = """\
@@ -51,26 +51,6 @@ def build_prompt(cfg, template_text):
     return "\n".join(parts) + "\n"
 
 
-def number_lines(text):
-    """펜스 코드·자리표시자·HTML 주석 밖에서 숫자가 있는 줄. (줄 번호, 줄)"""
-    found, fence = [], None
-    for n, line in enumerate(text.splitlines(), 1):
-        m = re.match(r"^\s*(`{3,}|~{3,})", line)
-        if m:
-            mark = m.group(1)
-            if fence is None:
-                fence = mark
-            elif mark[0] == fence[0] and len(mark) >= len(fence):
-                fence = None
-            continue
-        if fence:
-            continue
-        body = re.sub(r"\{\{fact:[^}]*\}\}|<!--.*?-->|`[^`]*`", "", line)
-        if re.search(r"\d", body):
-            found.append((n, line))
-    return found
-
-
 def draft(cfg, template, out, provider=None):
     template = Path(template)
     if not template.is_file():
@@ -85,10 +65,12 @@ def draft(cfg, template, out, provider=None):
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text, encoding="utf-8")
     print(f"초안: {cfg.rel(out)} (호출 기록 {cfg.rel(record)})")
-    bad = number_lines(text)
-    if bad:
-        print(f"숫자가 직접 들어간 줄 {len(bad)}개 — 사실 키로 바꾸거나 근거를 확인하세요:")
-        for n, line in bad:
-            print(f"  {cfg.rel(out)}:{n}: {line.strip()}")
+    found = numbers.scan_text(text, cfg.check.get("number_allow", []))
+    lines = text.splitlines()
+    for n, level, msg in found:
+        warn = "경고: " if level == "warn" else ""
+        print(f"  {cfg.rel(out)}:{n}: [numbers] {warn}{msg}\n    | {lines[n - 1].strip()}")
+    if any(level == "error" for _, level, _ in found):
+        print("숫자가 직접 들어간 줄이 있습니다 — 사실 키로 바꾸거나 근거를 확인하세요")
         return CHECK_FAILED
     return OK

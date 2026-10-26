@@ -61,3 +61,13 @@
   정규화는 비교에만 쓰고 문서에 나가는 출력은 바꾸지 않는다.
 - run 검사: 블록 본문이 있으면 최신 증거(또는 `--rerun` 이면 지금 실행한 출력)와 비교,
   본문이 없으면 `--rerun` 때 최신 증거와 지금 출력을 비교한다(증거가 낡았는지). `--rerun` 은 증거를 저장하지 않는다.
+
+## links·terms·secrets·stale
+- 설정 `[check]` 에 `terms`(기본 terms.toml), `banned`(기본 banned.txt, 둘 다 docs/ 기준), `ip_allow`(주소·CIDR),
+  `email_allow`(도메인)를 더했다.
+- terms: 영문은 낱말 단위·대소문자 구분. 바른말 안에 든 틀린말(예: '라즈베리 파이4' 안의 '라즈베리 파이')은 바른말을 먼저 지우고 찾는다.
+- secrets 는 docs/src·docs/out 에 더해 **docs/facts 와 docs/evidence/runs 도** 본다(전부 파일을 고르지 않았을 때).
+  저장소에 같이 공개되는 파일이라서다. 문서용 주소(192.0.2.0/24 등)·루프백·0.0.0.0, example.com 계열은 넘긴다.
+  찾은 값은 앞 두 글자만 보여 준다(CI 기록에 다시 새지 않게). 255 를 넘는 마디가 있으면 IP 로 보지 않는다.
+- stale: 기본은 .deps.json 의 sha256 비교(+ 원본 문서 자체가 렌더 뒤에 바뀌었는지, render 가 `src_sha256` 를 남김),
+  렌더 기록이 없는 문서도 알린다. `--since REV` 는 `git diff --name-only REV --`(작업 트리 포함)로 판단한다.

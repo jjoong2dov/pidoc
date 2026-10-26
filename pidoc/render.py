@@ -163,7 +163,7 @@ def render(cfg, files):
         out = docmod.out_path(cfg, src)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text, encoding="utf-8")
-        deps[name] = dict(info, out=cfg.rel(out), rendered_at=iso(at))
+        deps[name] = dict(info, out=cfg.rel(out), rendered_at=iso(at), src_sha256=sha256_file(src))
         print(f"{cfg.rel(out)} ← {name}")
     if deps:
         write_json(cfg.out_dir / ".deps.json", deps)

@@ -64,6 +64,12 @@ def cmd_check(args):
     return check(cfg, args.files, args.only, args.json, args.rerun)
 
 
+def cmd_stale(args):
+    from .stale import stale
+    cfg = load_config(args)
+    return stale(cfg, args.since)
+
+
 def cmd_facts(args):
     cfg = load_config(args)
     every = facts.load_all(cfg.facts_dir)
@@ -125,12 +131,16 @@ def parser():
     s.add_argument("files", nargs="*", help="이 문서들만 (기본: docs/src/*.md 전부)")
     s.set_defaults(func=cmd_render)
 
-    s = sub.add_parser("check", help="문서 시험 (facts, numbers, ...)")
+    s = sub.add_parser("check", help="문서 시험 (facts·numbers·quote·run·links·terms·secrets)")
     s.add_argument("files", nargs="*", help="이 문서들만 (기본: docs/src/*.md 전부)")
     s.add_argument("--only", nargs="+", metavar="검사", help="이 검사들만")
     s.add_argument("--json", action="store_true", help="결과를 JSON 으로")
     s.add_argument("--rerun", action="store_true", help="pidoc-run 블록을 지금 다시 실행해 비교")
     s.set_defaults(func=cmd_check)
+
+    s = sub.add_parser("stale", help="코드가 바뀌어 다시 봐야 할 문서 찾기")
+    s.add_argument("--since", metavar="REV", help="git 의 이 판 이후 바뀐 파일로 판단 (예: origin/main)")
+    s.set_defaults(func=cmd_stale)
 
     s = sub.add_parser("facts", help="사실 목록 보기")
     s.add_argument("--target", help="이 대상만")

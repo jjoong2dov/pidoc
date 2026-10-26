@@ -10,7 +10,7 @@ from .. import doc as docmod
 from ..facts import load_all as load_facts
 from ..util import CHECK_FAILED, OK, PidocError, now
 
-NAMES = ("facts", "numbers", "quote", "run")
+NAMES = ("facts", "numbers", "quote", "run", "links", "terms", "secrets")
 
 
 class Finding:

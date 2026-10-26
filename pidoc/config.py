@@ -3,6 +3,7 @@
 모르는 키는 오타일 가능성이 크므로 오류로 멈춘다(조용히 무시하지 않는다).
 """
 
+import ipaddress
 import os
 import re
 import tomllib
@@ -268,7 +269,7 @@ def _check_ai(cfg):
         _type(a["timeout_s"], "num", "ai.timeout_s")
 
 
-CHECK_KEYS = ("numbers", "number_allow", "stale_deps", "unused_facts")
+CHECK_KEYS = ("numbers", "number_allow", "stale_deps", "unused_facts", "terms", "banned", "ip_allow", "email_allow")
 
 
 def _check_check(cfg):
@@ -278,7 +279,16 @@ def _check_check(cfg):
         raise PidocError(f"설정 오류: check.numbers 는 error | warn | off: {c['numbers']!r}")
     if c.get("unused_facts", "warn") not in ("warn", "off"):
         raise PidocError(f"설정 오류: check.unused_facts 는 warn | off: {c['unused_facts']!r}")
-    _type(c.get("number_allow", []), "strlist", "check.number_allow")
+    for key in ("number_allow", "ip_allow", "email_allow"):
+        _type(c.get(key, []), "strlist", f"check.{key}")
+    for key in ("terms", "banned"):
+        if key in c:
+            _type(c[key], "str", f"check.{key}")
+    for net in c.get("ip_allow", []):
+        try:
+            ipaddress.ip_network(net, strict=False)
+        except ValueError:
+            raise PidocError(f"설정 오류: check.ip_allow 의 주소가 이상합니다: {net!r}")
     deps = c.get("stale_deps", {})
     if not isinstance(deps, dict):
         raise PidocError("설정 오류: check.stale_deps 는 { \"문서\" = [\"파일\", ...] } 표여야 합니다")

@@ -1,29 +1,36 @@
 # pidoc — 실행 증거로 쓰고 시험하는 기술문서
 
-AI 가 기술문서를 빨리 쓰게 하되, **명령·출력·버전·수치는 실행 증거 없이는 출판되지 않게** 만드는 작은 파이썬 도구입니다.
-전자책 《라즈베리 파이 × AI 실전 개발실》 4권의 실습 저장소이고, 2권의 pimon(라즈베리 파이 상태 모니터)을 문서화 대상으로 씁니다.
+AI 가 기술문서를 빨리 쓰게 하되, **실행값·출력은 실행 증거에서 채우고, 코드에서 뽑은 값과 규칙이 분류한 숫자를 검사해 근거 없는 수치를 상당수 막는** 작은 파이썬 도구입니다.
+전자책 시리즈 《라즈베리 파이 × AI 실전 개발실》 4권 《라즈베리 파이로 만드는 AI 기술문서 테스트》의 실습 저장소이고, 2권의 pimon(라즈베리 파이 상태 모니터)을 문서화 대상으로 씁니다.
 
 ```
-명령 실행 ──▶ evidence(손대지 않은 출력) ──▶ facts(타입 있는 값) ──▶ docs/src({{fact:키}}) ──▶ docs/out
+명령 실행 ──▶ evidence(가리기 뒤 출력) ──▶ facts(타입 있는 값) ──▶ docs/src({{fact:키}}) ──▶ docs/out
   collect        docs/evidence/runs/            docs/facts/*.json         render·check             build
 ```
 
-- 사실은 기계가: 명령을 셸 없이 실행해 원시 출력과 sha256 을 남기고, 정해진 규칙으로 값을 뽑습니다.
+- 사실은 기계가: 명령을 실행해(로컬은 셸 없이) 공개용 가리기만 거친 출력과 sha256 을 남기고, 정해진 규칙으로 값을 뽑습니다.
 - 문장은 AI 가: 초안에는 숫자 대신 `{{fact:키}}` 자리표시자를 쓰게 합니다.
 - 판단은 사람이: `pidoc check` 가 근거 없는 숫자·틀린 인용·낡은 출력·내부 정보를 드러내고, 사람이 고칩니다.
 
 할 수 있는 것과 없는 것: 근거 없는 수치를 상당수 막고 나머지를 검토 대상으로 드러냅니다.
-문장의 뜻이 맞는지, 사실을 맞는 자리에 썼는지는 사람이 봐야 합니다.
+git·test 사실, 검사가 분류하지 못한 숫자, `pidoc-ok` 를 붙인 줄, 문장의 뜻, 사실을 맞는 자리에 썼는지는 사람이 봐야 합니다.
 
 ## 준비
 
 파이썬 3.11 이상. 핵심 기능은 표준 라이브러리만 씁니다.
 
+pidoc 과 문서화 대상 pimon 을 나란히 받습니다.
+
 ```sh
-git clone <이 저장소> pidoc && cd pidoc
+mkdir -p ~/work && cd ~/work
+git clone https://github.com/jjoong2dov/pidoc
+git clone https://github.com/jjoong2dov/pimon
+cd pidoc
+git checkout book4-v1.0                 # 책과 같은 판(최신을 쓰려면 생략)
 python3 -m venv .venv
 .venv/bin/pip install -e .              # pidoc 명령이 생깁니다
 .venv/bin/pip install -e '.[pdf]'       # HTML(markdown-it-py)·PDF(WeasyPrint)도 쓰려면
+export PATH="$HOME/work/pidoc/.venv/bin:$PATH"
 ```
 
 설치하지 않고 `PYTHONPATH=<pidoc 폴더> python3 -m pidoc ...` 로 돌려도 됩니다.
@@ -34,12 +41,12 @@ PDF 는 시스템에 Pango 가 있어야 하고, 한글 글꼴은 나눔고딕(`
 ### 1. pimon 받기와 설정 복사
 
 ```sh
-git clone https://github.com/jjoong2dov/pimon.git
-cd pimon
+cd ~/work/pimon
 cp -r ../pidoc/examples/pimon/docs/. docs/
 ```
 
-`docs/pidoc.toml` 이 설정, `docs/src/` 가 문서 원본입니다(`quickstart.md`, `reference.md`).
+`docs/pidoc.toml` 이 설정, `docs/src/` 가 문서 원본입니다(`quickstart.md`, `reference.md`, 파이 설치 튜토리얼 `pi-install.md`).
+`pi-install.md` 가 쓰는 파이 사실(`docs/facts/pi.json`)과 그 증거(`docs/evidence/`)도 함께 복사되므로 파이 없이도 렌더됩니다.
 
 ### 2. 수집: 명령을 실행해 증거와 사실 만들기
 
@@ -48,9 +55,9 @@ pidoc collect --target pc
 ```
 
 ```
-[pc] run 20261026T191351-pc
+[pc] run 20261027T100956-pc
   성공 fake_pi (33 ms, 사실 0개)
-  성공 python_version (4 ms, 사실 1개)
+  성공 python_version (2 ms, 사실 1개)
   성공 pimon_help (64 ms, 사실 1개)
   성공 pimon_once (65 ms, 사실 3개) (가림 1곳)
   성공 check_config (65 ms, 사실 1개)
@@ -59,7 +66,7 @@ pidoc collect --target pc
 
 - 출력이 `max_output` 을 넘어 잘리거나, UTF-8 이 아니거나, 사실 하나라도 못 뽑으면 그 명령은 실패이고 그 명령의 사실은 하나도 갱신하지 않습니다.
 - `--token 값`·`--password=값` 같은 argv 의 민감한 값은 증거에 `<가림>` 으로 남습니다.
-- 실행 기록은 `docs/evidence/runs/<run-id>/` 에: `manifest.json`, 명령마다 `.stdout`·`.stderr`(원시 바이트)·`.json`(argv, 종료 코드, 걸린 시간, sha256 ...).
+- 실행 기록은 `docs/evidence/runs/<run-id>/` 에: `manifest.json`, 명령마다 `.stdout`·`.stderr`(가리기 뒤 바이트, 원본은 `--keep-raw` 일 때만 `evidence/private/` 에)·`.json`(argv, 종료 코드, 걸린 시간, sha256 ...).
 - "가림 1곳": pimon 출력의 `"host"` 에 든 이 PC 의 실제 hostname 을 대상 별칭(`devpc`)으로 바꿨다는 뜻입니다.
 - `pidoc facts` 로 사실을 봅니다(키·값·타입·나이·출처 run).
 
@@ -88,9 +95,11 @@ pidoc check
 ```
 
 ```
+docs/facts/pi.json: [facts] 경고: 문서에서 쓰이지 않는 사실: pi:pimon.level
+docs/facts/pi.json: [facts] 경고: 문서에서 쓰이지 않는 사실: pi:pimon.subcommands
 docs/src/quickstart.md:36: [numbers] 근거 없는 숫자: 5 — {{fact:키}} 로 바꾸거나 줄 끝에 <!-- pidoc-ok: 이유 --> 를 다세요
 docs/src/quickstart.md:36: [terms] '라즈베리파이' 대신 '라즈베리 파이'
-문서 2개 검사: 오류 2, 경고 0
+문서 3개 검사: 오류 2, 경고 2
 ```
 
 코드가 바뀌면:
@@ -132,19 +141,20 @@ pidoc stale --since HEAD    # git diff 로 (CI 에서 PR 마다)
 | `pidoc report <junit.xml>` | pytest 결과 → 사실 → 시험 보고서 |
 | `pidoc i18n-check <원본.md> <번역.md>` | 코드·자리표시자·링크·숫자가 같은지 |
 
-종료 코드: 0 성공, 1 검사 실패(문서 문제), 2 사용법·설정 오류, 3 수집 실패(명령 실패·시간 초과).
+종료 코드: 0 성공, 1 검사 실패(문서 문제), 2 사용법·설정 오류, 3 실행 작업 실패(collect 의 명령 실패·시간 초과, replay 의 사실 재추출 실패, AI 호출 실패, walk 의 단계 실패).
+`notes --check`, `notes`·`report` 의 `--template` 에 없는 파일을 주면 지금 판은 처리하지 않은 예외(트레이스백)와 종료 코드 1 로 끝납니다.
 
 ## 검사 (pidoc check)
 
 | 검사 | 보는 것 |
 |---|---|
-| facts | 없는 키, 변환·타입, 만료(`max_age_days`), **증거와 맞는지**(그 run 의 stdout 에서 같은 규칙으로 다시 뽑아 비교, 코드 사실은 원본 파일 sha256, 더 최근 수집이 실패했으면 오류), 쓰이지 않는 사실(경고) |
+| facts | 없는 키, 변환·타입, 만료(`max_age_days`), **증거와 맞는지**(그 run 의 stdout 에서 같은 규칙으로 다시 뽑아 비교, 코드 사실은 원본 파일 sha256 과 같은 추출기로 다시 뽑은 값·타입, 더 최근 수집이 실패했으면 오류), 쓰이지 않는 사실(경고) |
 | numbers | 본문 숫자 리터럴(오류). 머리글 번호, 두 자리까지의 번호 목록, 1부터 느는 표 첫 열, 장·절 참조, `IPv4`·`UTF-8` 같은 이름, 커밋 해시, `number_allow`, `pidoc-ok` 는 뺀다. 코드(펜스·인라인)의 숫자는 `check.code_numbers` 등급(기본 경고). 한글 수사("두 번")·비교 표현("최신", "빠르다")은 경고 |
 | quote | pidoc-quote 블록이 실제 파일과 같은지 |
 | run | pidoc-run 블록의 증거가 있는지, 본문이 있으면 증거와 같은지(정규화 뒤). `--rerun` 이면 지금 다시 실행해 비교 |
 | links | 상대 링크의 파일과 `#앵커` |
 | terms | `docs/terms.toml` 용어집(`"바른말" = ["틀린말", ...]`) |
-| secrets | IPv4·IPv6·MAC·이메일·실제 hostname·금지어(`docs/banned.txt`, 저장소에 넣지 않음)·개인키·Bearer·흔한 API 토큰·URL 안 비밀번호·홈 폴더 경로. src·out·facts·evidence·ai 모두. **휴리스틱이라 모든 비밀을 찾지는 못합니다** |
+| secrets | IPv4·IPv6·MAC·이메일·실제 hostname·금지어(`docs/banned.txt`, 저장소에 넣지 않음)·개인키·Bearer·흔한 API 토큰·URL 안 비밀번호·홈 폴더 경로. 문서와 out·facts·evidence(runs·walks)·ai 폴더의 텍스트 확장자 파일(`.md` `.json` `.txt` `.xml` `.toml` 등). 저장소 전체·PDF·이미지는 보지 않습니다. **휴리스틱이라 모든 비밀을 찾지는 못합니다** |
 
 ## 설정 (docs/pidoc.toml) 요약
 
@@ -172,7 +182,13 @@ pidoc collect --target pi
 ```
 
 - `ssh -o BatchMode=yes -o StrictHostKeyChecking=yes` 로 돌립니다. 비밀번호를 묻지 않고, 처음 보는 호스트 키는 거절합니다.
-  먼저 `ssh pi@<주소>` 로 한 번 접속해 호스트 키를 확인·저장하고, 키 로그인을 준비하세요.
+  견본 설정은 대상별 호스트 키 파일(`known_hosts = "pi.known_hosts"`, docs 기준)만 봅니다. 키 로그인을 준비한 뒤, pimon 폴더에서 이 파일로 키를 한 번 받고 지문을 확인하세요.
+
+```sh
+ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=docs/pi.known_hosts pi@<파이 주소> true
+ssh-keygen -lf docs/pi.known_hosts       # 파이에서 ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub 와 같은지
+```
+
 - 원격 명령은 `shlex.join` 으로 한 줄이 되어 원격 셸이 해석합니다. 그래서 ssh 대상은 `allow_programs` 가 꼭 있어야 하고,
   목록 밖 프로그램은 실행하지 않습니다.
 
@@ -187,7 +203,7 @@ pidoc collect --target pi
 - argv 에 줄바꿈·제어 문자를 쓸 수 없습니다.
 
 정말 격리가 필요하면 수집 전용 계정(권한 없는 사용자)이나 컨테이너에서 돌리세요.
-- 파이가 없는 독자는 저장소에 들어 있는 증거로 `pidoc replay docs/evidence/runs` 를 돌리면 같은 사실을 얻습니다.
+- 파이가 없는 독자는 복사해 온 증거로 `pidoc replay docs/evidence/runs`(pimon 폴더에서)를 돌리면 같은 사실을 다시 뽑습니다.
 
 ## 따라 하기 문서 시험 (pidoc walk)
 
@@ -206,9 +222,9 @@ python3 -m pimon check-config --config pimon.toml.example
 
 ```sh
 pidoc render
-pidoc walk docs/out/pi-tutorial.md --target pi --dry-run   # 무엇을 실행할지 보기
-pidoc walk docs/out/pi-tutorial.md --target pi             # 실패하면 "N단계 실패" + 마지막 출력, 종료 3
-pidoc walk docs/out/pi-tutorial.md --target pi --from 3    # 고친 뒤 이어서
+pidoc walk docs/out/pi-install.md --target pi --dry-run   # 무엇을 실행할지 보기
+pidoc walk docs/out/pi-install.md --target pi             # 실패하면 "N단계 실패" + 마지막 출력, 종료 3
+pidoc walk docs/out/pi-install.md --target pi --from 3    # 고친 뒤 이어서
 ```
 
 - 블록 하나가 한 단계이고 `bash -e -o pipefail -c '<블록>'` 으로 돕니다(ssh 대상은 collect 와 같은 ssh 옵션).
@@ -225,7 +241,7 @@ pidoc draft 틀.md --out docs/src/usage.md --ai codex     # codex exec -
 pidoc draft 틀.md --out docs/src/usage.md --ai none      # 부르지 않고 프롬프트만 저장
 ```
 
-호출마다 `docs/ai/<시각>-draft/` 에 `prompt.txt`, `input.sha256`, `meta.json`(도구·argv·모델·시각·종료 코드), `raw.txt`(받은 그대로)가 남습니다.
+비밀 검사를 통과한 호출은 `docs/ai/<시각>-draft/` 에 `prompt.txt`, `input.sha256`, `meta.json`(도구·argv·모델·시각)이 남고, AI 프로세스가 끝까지 돈 경우에만 종료 코드와 `raw.txt`(받은 그대로)가 더해집니다(`--ai none`, 실행 파일 없음, 시간 초과에는 없음). 프롬프트가 비밀 검사에 걸리면 기록 폴더도 만들지 않습니다.
 프롬프트에는 사실 값이 들어가므로 `docs/ai/` 는 기본으로 git 에 넣지 않습니다(`pidoc init` 이 .gitignore 에 넣음).
 보낼 사실은 `[ai] facts = ["pc:*", "code:config.*"]` 처럼 줄일 수 있고, 보내기 전에 secrets 검사와 같은 규칙으로
 프롬프트를 훑어 걸리면 보내지 않습니다.
@@ -257,6 +273,7 @@ pidoc draft 틀.md --out docs/src/usage.md --ai none      # 부르지 않고 프
 | `v0.4` | 12장 응용 실행에서 고친 것: i18n-check 링크를 문서 위치 기준으로 비교, git 사실의 숫자로만 된 커밋 해시를 숫자 검사에서 뺌 |
 | `v0.5` | 원고 작업 중 발견: secrets 가 `.xml`(junit.xml 의 hostname) 등도 검사, `check --rerun` 이 ssh 실패 때 죽던 것, PDF 가 막은 주소를 경고, 한글 글꼴 안내 |
 | `v0.6` | Codex 최종 사실 검토에서 고친 것: 코드 사실도 같은 추출기로 다시 뽑아 값을 대조, HTML 에서 하위 폴더 문서의 링크 변환 |
+| `book4-v1.0` | 책 출간 기준: `v0.6` 코드 + GitHub Actions 작업 파일 + 이 README 의 출간 전 검토 반영(코드는 `v0.6` 과 같음) |
 
 설계와 달라진 점은 [DESIGN_CHANGES.md](DESIGN_CHANGES.md), 작업 규칙은 [CLAUDE.md](CLAUDE.md).
 
